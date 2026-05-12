@@ -1,0 +1,12 @@
+{
+  "name": "Deck of Fates",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "action": {
+    "title": "Deck of Fates",
+    "icon": "./icon.svg",
+    "popover": "./index.html",
+    "height": 620,
+    "width": 420
+  }
+}
