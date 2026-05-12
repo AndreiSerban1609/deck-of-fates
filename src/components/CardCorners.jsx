@@ -17,10 +17,9 @@ export function SteelCorner({ color = "#c0cde8", size = 22 }) {
   );
 }
 
-export function EnergyCorner({ color = "#d89cf5", size = 22 }) {
+export function MightCorner({ color = "#f08060", size = 22 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Four-pointed star burst */}
       <path d="M12 1 L14 9 L22 12 L14 15 L12 23 L10 15 L2 12 L10 9 Z" fill={color} opacity="0.3" />
       <path d="M12 5 L13 10 L18 12 L13 14 L12 19 L11 14 L6 12 L11 10 Z" fill={color} opacity="0.5" />
       <circle cx="12" cy="12" r="2" fill={color} opacity="0.7" />
@@ -222,7 +221,7 @@ export function BattlemageCorner({ color = "#c890e0", size = 22 }) {
 
 const BASE_CORNERS = {
   STEEL_CRITICAL: SteelCorner,
-  ENERGY_CRITICAL: EnergyCorner,
+  MIGHT_CRITICAL: MightCorner,
   NEUTRAL: NeutralCorner,
   ENCOUNTER: EncounterCorner,
   STAT: StatCorner,

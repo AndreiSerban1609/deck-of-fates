@@ -6,10 +6,21 @@ const S = { position: "absolute", top: -P, left: -P, pointerEvents: "none", zInd
 const rrect = (w, h, r = 14) =>
   `M${r} 0H${w - r}Q${w} 0 ${w} ${r}V${h - r}Q${w} ${h} ${w - r} ${h}H${r}Q0 ${h} 0 ${h - r}V${r}Q0 0 ${r} 0Z`;
 
+const outerRect = (w, h) =>
+  `M${-P} ${-P}H${w + P}V${h + P}H${-P}Z`;
+
 function Frame({ w, h, children }) {
+  const clipId = React.useId().replace(/:/g, "_");
   return (
     <svg style={S} width={w + P * 2} height={h + P * 2} viewBox={`0 0 ${w + P * 2} ${h + P * 2}`} fill="none">
-      <g transform={`translate(${P},${P})`}>{children}</g>
+      <defs>
+        <clipPath id={clipId}>
+          <path d={`${outerRect(w, h)} ${rrect(w, h)}`} clipRule="evenodd" />
+        </clipPath>
+      </defs>
+      <g transform={`translate(${P},${P})`}>
+        {typeof children === "function" ? children(clipId) : children}
+      </g>
     </svg>
   );
 }
@@ -45,7 +56,7 @@ export function SteelCriticalFrame({ color = "#8b9dc3", w = 200, h = 290 }) {
   );
 }
 
-export function EnergyCriticalFrame({ color = "#b44aed", w = 200, h = 290 }) {
+export function MightCriticalFrame({ color = "#e04030", w = 200, h = 290 }) {
   return (
     <Frame w={w} h={h}>
       <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
@@ -116,28 +127,69 @@ export function StatFrame({ color = "#2a9cd4", w = 200, h = 290 }) {
 export function MusicianFrame({ color = "#c4587a", w = 200, h = 290 }) {
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
-      {/* Lute emerging from behind top-left */}
-      <ellipse cx="18" cy="-4" rx="10" ry="7" stroke={color} strokeWidth="2" fill={color} fillOpacity="0.15" opacity="0.7" />
-      <ellipse cx="18" cy="-4" rx="5" ry="3" fill={color} opacity="0.25" />
-      <line x1="18" y1="-11" x2="18" y2="-20" stroke={color} strokeWidth="2.5" opacity="0.7" strokeLinecap="round" />
-      <line x1="15" y1="-18" x2="21" y2="-18" stroke={color} strokeWidth="2" opacity="0.6" strokeLinecap="round" />
-      <line x1="15" y1="-15" x2="21" y2="-15" stroke={color} strokeWidth="1.5" opacity="0.5" strokeLinecap="round" />
-      {/* Lute emerging from behind top-right */}
-      <ellipse cx={w - 18} cy="-4" rx="10" ry="7" stroke={color} strokeWidth="2" fill={color} fillOpacity="0.15" opacity="0.7" />
-      <ellipse cx={w - 18} cy="-4" rx="5" ry="3" fill={color} opacity="0.25" />
-      <line x1={w - 18} y1="-11" x2={w - 18} y2="-20" stroke={color} strokeWidth="2.5" opacity="0.7" strokeLinecap="round" />
-      <line x1={w - 21} y1="-18" x2={w - 15} y2="-18" stroke={color} strokeWidth="2" opacity="0.6" strokeLinecap="round" />
-      <line x1={w - 21} y1="-15" x2={w - 15} y2="-15" stroke={color} strokeWidth="1.5" opacity="0.5" strokeLinecap="round" />
-      {/* Musical wave along bottom */}
-      <path d={`M${w * 0.1} ${h - 2} Q${w * 0.25} ${h - 14} ${w * 0.4} ${h - 2} Q${w * 0.55} ${h + 10} ${w * 0.7} ${h - 2} Q${w * 0.85} ${h - 12} ${w * 0.95} ${h - 2}`} stroke={color} strokeWidth="2" opacity="0.45" fill="none" />
-      {/* Note dots on sides */}
-      {[0.25, 0.45, 0.65, 0.85].map((p, i) => (
-        <g key={i}>
-          <circle cx={i % 2 === 0 ? 3 : w - 3} cy={h * p} r="2.5" fill={color} opacity="0.25" />
-          <line x1={i % 2 === 0 ? 3 : w - 3} y1={h * p - 2.5} x2={i % 2 === 0 ? 3 : w - 3} y2={h * p - 10} stroke={color} strokeWidth="1.5" opacity="0.3" />
-        </g>
-      ))}
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* LEFT LUTE — 45° angled, pear-shaped body */}
+            <g transform="translate(24, -2) rotate(-45, 0, 0)">
+              {/* Body — smooth pear/teardrop shape */}
+              <path d={`M0 16 Q-17 14 -17 0 Q-17 -8 -12 -12 Q-6 -15 -4 -15 L4 -15 Q6 -15 12 -12 Q17 -8 17 0 Q17 14 0 16 Z`} stroke={color} strokeWidth="2.5" fill={color} fillOpacity="0.15" opacity="0.8" />
+              {/* Sound hole */}
+              <circle cx="0" cy="2" r="5" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
+              <circle cx="0" cy="2" r="2" fill={color} opacity="0.3" />
+              {/* Rosette around sound hole */}
+              <circle cx="0" cy="2" r="7" stroke={color} strokeWidth="0.6" fill="none" opacity="0.25" strokeDasharray="2 2" />
+              {/* Bridge */}
+              <rect x="-6" y="10" width="12" height="2" rx="1" fill={color} opacity="0.35" />
+              {/* Neck */}
+              <line x1="0" y1="-15" x2="0" y2="-42" stroke={color} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
+              {/* Frets */}
+              {[-20, -25, -30, -35].map((y, i) => (
+                <line key={`f${i}`} x1="-3" y1={y} x2="3" y2={y} stroke={color} strokeWidth="1" opacity="0.35" />
+              ))}
+              {/* Headstock */}
+              <rect x="-5" y="-46" width="10" height="6" rx="2.5" fill={color} opacity="0.4" />
+              <path d={`M-5 -44 Q-8 -44 -8 -42`} stroke={color} strokeWidth="1.5" opacity="0.3" fill="none" />
+              <path d={`M5 -44 Q8 -44 8 -42`} stroke={color} strokeWidth="1.5" opacity="0.3" fill="none" />
+              {/* Tuning pegs */}
+              <circle cx="-6" cy="-43" r="1.5" fill={color} opacity="0.5" />
+              <circle cx="-6" cy="-46" r="1.5" fill={color} opacity="0.5" />
+              <circle cx="6" cy="-43" r="1.5" fill={color} opacity="0.5" />
+              <circle cx="6" cy="-46" r="1.5" fill={color} opacity="0.5" />
+              {/* Strings */}
+              <line x1="-2" y1="10" x2="-2" y2="-40" stroke={color} strokeWidth="0.5" opacity="0.25" />
+              <line x1="0" y1="10" x2="0" y2="-40" stroke={color} strokeWidth="0.5" opacity="0.2" />
+              <line x1="2" y1="10" x2="2" y2="-40" stroke={color} strokeWidth="0.5" opacity="0.25" />
+            </g>
+            {/* RIGHT LUTE — mirrored */}
+            <g transform={`translate(${w - 24}, -2) rotate(45, 0, 0)`}>
+              <path d={`M0 16 Q-17 14 -17 0 Q-17 -8 -12 -12 Q-6 -15 -4 -15 L4 -15 Q6 -15 12 -12 Q17 -8 17 0 Q17 14 0 16 Z`} stroke={color} strokeWidth="2.5" fill={color} fillOpacity="0.15" opacity="0.8" />
+              <circle cx="0" cy="2" r="5" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
+              <circle cx="0" cy="2" r="2" fill={color} opacity="0.3" />
+              <circle cx="0" cy="2" r="7" stroke={color} strokeWidth="0.6" fill="none" opacity="0.25" strokeDasharray="2 2" />
+              <rect x="-6" y="10" width="12" height="2" rx="1" fill={color} opacity="0.35" />
+              <line x1="0" y1="-15" x2="0" y2="-42" stroke={color} strokeWidth="4" opacity="0.7" strokeLinecap="round" />
+              {[-20, -25, -30, -35].map((y, i) => (
+                <line key={`f${i}`} x1="-3" y1={y} x2="3" y2={y} stroke={color} strokeWidth="1" opacity="0.35" />
+              ))}
+              <rect x="-5" y="-46" width="10" height="6" rx="2.5" fill={color} opacity="0.4" />
+              <path d={`M-5 -44 Q-8 -44 -8 -42`} stroke={color} strokeWidth="1.5" opacity="0.3" fill="none" />
+              <path d={`M5 -44 Q8 -44 8 -42`} stroke={color} strokeWidth="1.5" opacity="0.3" fill="none" />
+              <circle cx="-6" cy="-43" r="1.5" fill={color} opacity="0.5" />
+              <circle cx="-6" cy="-46" r="1.5" fill={color} opacity="0.5" />
+              <circle cx="6" cy="-43" r="1.5" fill={color} opacity="0.5" />
+              <circle cx="6" cy="-46" r="1.5" fill={color} opacity="0.5" />
+              <line x1="-2" y1="10" x2="-2" y2="-40" stroke={color} strokeWidth="0.5" opacity="0.25" />
+              <line x1="0" y1="10" x2="0" y2="-40" stroke={color} strokeWidth="0.5" opacity="0.2" />
+              <line x1="2" y1="10" x2="2" y2="-40" stroke={color} strokeWidth="0.5" opacity="0.25" />
+            </g>
+            {/* Musical wave along bottom — peeks out below */}
+            <path d={`M${w * 0.05} ${h - 2} Q${w * 0.15} ${h - 16} ${w * 0.28} ${h - 2} Q${w * 0.4} ${h + 14} ${w * 0.52} ${h - 2} Q${w * 0.64} ${h - 14} ${w * 0.76} ${h - 2} Q${w * 0.88} ${h + 12} ${w * 0.97} ${h - 2}`} stroke={color} strokeWidth="2.5" opacity="0.45" fill="none" />
+            <path d={`M${w * 0.12} ${h + 2} Q${w * 0.22} ${h + 10} ${w * 0.35} ${h + 2} Q${w * 0.48} ${h - 6} ${w * 0.6} ${h + 2} Q${w * 0.72} ${h + 8} ${w * 0.85} ${h + 2}`} stroke={color} strokeWidth="1.5" opacity="0.25" fill="none" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
+        </>
+      )}
     </Frame>
   );
 }
@@ -146,73 +198,152 @@ export function DiscipleFrame({ color = "#e0c040", w = 200, h = 290 }) {
   const hw = w / 2;
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
-      {/* Prominent sun rays from top center */}
-      <line x1={hw} y1="0" x2={hw} y2="-18" stroke={color} strokeWidth="3" opacity="0.7" strokeLinecap="round" />
-      <line x1={hw - 12} y1="1" x2={hw - 20} y2="-14" stroke={color} strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
-      <line x1={hw + 12} y1="1" x2={hw + 20} y2="-14" stroke={color} strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
-      <line x1={hw - 22} y1="3" x2={hw - 30} y2="-6" stroke={color} strokeWidth="2" opacity="0.45" strokeLinecap="round" />
-      <line x1={hw + 22} y1="3" x2={hw + 30} y2="-6" stroke={color} strokeWidth="2" opacity="0.45" strokeLinecap="round" />
-      {/* Sun disc at top */}
-      <circle cx={hw} cy="0" r="6" fill={color} opacity="0.15" />
-      {/* Corner radiance */}
-      <line x1="3" y1="3" x2="16" y2="16" stroke={color} strokeWidth="1.5" opacity="0.4" />
-      <line x1="3" y1="12" x2="12" y2="16" stroke={color} strokeWidth="1.2" opacity="0.3" />
-      <line x1={w - 3} y1="3" x2={w - 16} y2="16" stroke={color} strokeWidth="1.5" opacity="0.4" />
-      <line x1={w - 3} y1="12" x2={w - 12} y2="16" stroke={color} strokeWidth="1.2" opacity="0.3" />
-      {/* Inner glow border */}
-      <path d={rrect(w - 8, h - 8, 10)} stroke={color} strokeWidth="0.7" opacity="0.2" transform="translate(4,4)" />
-      {/* Bottom radiance (no cross) */}
-      <circle cx={hw} cy={h} r="4" fill={color} opacity="0.15" />
-      <line x1={hw - 14} y1={h - 2} x2={hw - 6} y2={h - 2} stroke={color} strokeWidth="1.5" opacity="0.3" />
-      <line x1={hw + 6} y1={h - 2} x2={hw + 14} y2={h - 2} stroke={color} strokeWidth="1.5" opacity="0.3" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Sun disc centered on top edge — half behind card */}
+            <circle cx={hw} cy="0" r="12" fill={color} opacity="0.1" />
+            <circle cx={hw} cy="0" r="12" stroke={color} strokeWidth="2.5" fill="none" opacity="0.5" />
+            <circle cx={hw} cy="0" r="6" stroke={color} strokeWidth="1.2" fill="none" opacity="0.35" />
+            <circle cx={hw} cy="0" r="2.5" fill={color} opacity="0.5" />
+            {/* Long sun rays */}
+            <line x1={hw} y1="-12" x2={hw} y2="-20" stroke={color} strokeWidth="3" opacity="0.7" strokeLinecap="round" />
+            <line x1={hw - 9} y1="-8" x2={hw - 20} y2="-18" stroke={color} strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
+            <line x1={hw + 9} y1="-8" x2={hw + 20} y2="-18" stroke={color} strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
+            <line x1={hw - 16} y1="0" x2={hw - 30} y2="-8" stroke={color} strokeWidth="2" opacity="0.45" strokeLinecap="round" />
+            <line x1={hw + 16} y1="0" x2={hw + 30} y2="-8" stroke={color} strokeWidth="2" opacity="0.45" strokeLinecap="round" />
+            <line x1={hw - 5} y1="-12" x2={hw - 10} y2="-18" stroke={color} strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
+            <line x1={hw + 5} y1="-12" x2={hw + 10} y2="-18" stroke={color} strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
+            {/* Bottom glow — behind bottom edge */}
+            <circle cx={hw} cy={h} r="8" fill={color} opacity="0.08" />
+            <circle cx={hw} cy={h} r="8" stroke={color} strokeWidth="1.5" fill="none" opacity="0.3" />
+            <line x1={hw} y1={h + 8} x2={hw} y2={h + 3} stroke={color} strokeWidth="2" opacity="0.35" strokeLinecap="round" />
+            <line x1={hw - 6} y1={h + 6} x2={hw - 3} y2={h + 2} stroke={color} strokeWidth="1.5" opacity="0.25" strokeLinecap="round" />
+            <line x1={hw + 6} y1={h + 6} x2={hw + 3} y2={h + 2} stroke={color} strokeWidth="1.5" opacity="0.25" strokeLinecap="round" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
+          <path d={rrect(w - 8, h - 8, 10)} stroke={color} strokeWidth="0.7" opacity="0.2" transform="translate(4,4)" />
+        </>
+      )}
     </Frame>
   );
 }
 
 export function WildbornFrame({ color = "#4aaa6a", w = 200, h = 290 }) {
+  const thorn = "#3a8a5a";
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
-      {/* Thick vine left side - encroaching onto card */}
-      <path d={`M-4 ${h * 0.1} Q12 ${h * 0.18} 6 ${h * 0.28} Q-6 ${h * 0.38} 8 ${h * 0.48} Q18 ${h * 0.56} 4 ${h * 0.66} Q-8 ${h * 0.76} 6 ${h * 0.86} Q14 ${h * 0.92} 2 ${h}`} stroke={color} strokeWidth="3" opacity="0.6" strokeLinecap="round" />
-      {/* Leaves on left vine */}
-      <ellipse cx="10" cy={h * 0.22} rx="8" ry="4" fill={color} opacity="0.3" transform={`rotate(-35 10 ${h * 0.22})`} />
-      <ellipse cx="2" cy={h * 0.42} rx="7" ry="3.5" fill={color} opacity="0.25" transform={`rotate(30 2 ${h * 0.42})`} />
-      <ellipse cx="12" cy={h * 0.6} rx="8" ry="4" fill={color} opacity="0.3" transform={`rotate(-25 12 ${h * 0.6})`} />
-      <ellipse cx="4" cy={h * 0.8} rx="7" ry="3" fill={color} opacity="0.25" transform={`rotate(20 4 ${h * 0.8})`} />
-      {/* Vine right side */}
-      <path d={`M${w + 4} ${h * 0.2} Q${w - 10} ${h * 0.3} ${w - 4} ${h * 0.4} Q${w + 8} ${h * 0.5} ${w - 6} ${h * 0.6} Q${w - 14} ${h * 0.68} ${w - 2} ${h * 0.78}`} stroke={color} strokeWidth="3" opacity="0.5" strokeLinecap="round" />
-      <ellipse cx={w - 8} cy={h * 0.35} rx="7" ry="3.5" fill={color} opacity="0.25" transform={`rotate(30 ${w - 8} ${h * 0.35})`} />
-      <ellipse cx={w - 2} cy={h * 0.55} rx="8" ry="3.5" fill={color} opacity="0.3" transform={`rotate(-20 ${w - 2} ${h * 0.55})`} />
-      {/* Vine tendrils at top */}
-      <path d={`M${w * 0.3} 0 Q${w * 0.32} -6 ${w * 0.28} -10`} stroke={color} strokeWidth="2" opacity="0.4" strokeLinecap="round" />
-      <path d={`M${w * 0.7} 0 Q${w * 0.72} -8 ${w * 0.68} -12`} stroke={color} strokeWidth="2" opacity="0.4" strokeLinecap="round" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Left vine — snakes along left edge, bulging outside */}
+            <path d={`M-6 ${h * 0.05} Q-14 ${h * 0.14} -8 ${h * 0.24} Q2 ${h * 0.34} -10 ${h * 0.44} Q-18 ${h * 0.54} -6 ${h * 0.64} Q4 ${h * 0.74} -12 ${h * 0.84} Q-16 ${h * 0.92} -4 ${h}`} stroke={color} strokeWidth="4" opacity="0.6" strokeLinecap="round" />
+            <path d={`M-4 ${h * 0.12} Q-12 ${h * 0.2} -6 ${h * 0.3} Q2 ${h * 0.38} -8 ${h * 0.48}`} stroke={color} strokeWidth="1.8" opacity="0.3" strokeLinecap="round" />
+            {/* Left leaves — centered outside edge */}
+            <g transform={`rotate(-40 -6 ${h * 0.2})`}>
+              <ellipse cx="-6" cy={h * 0.2} rx="11" ry="5.5" fill={color} opacity="0.3" />
+              <line x1="-13" y1={h * 0.2} x2="1" y2={h * 0.2} stroke={color} strokeWidth="0.8" opacity="0.5" />
+              <line x1="-9" y1={h * 0.2 - 2.5} x2="-6" y2={h * 0.2} stroke={color} strokeWidth="0.6" opacity="0.35" />
+              <line x1="-3" y1={h * 0.2 + 2.5} x2="-6" y2={h * 0.2} stroke={color} strokeWidth="0.6" opacity="0.35" />
+            </g>
+            <g transform={`rotate(35 -8 ${h * 0.42})`}>
+              <ellipse cx="-8" cy={h * 0.42} rx="10" ry="5" fill={color} opacity="0.25" />
+              <line x1="-14" y1={h * 0.42} x2="-2" y2={h * 0.42} stroke={color} strokeWidth="0.8" opacity="0.45" />
+            </g>
+            <g transform={`rotate(-30 -4 ${h * 0.6})`}>
+              <ellipse cx="-4" cy={h * 0.6} rx="11" ry="5" fill={color} opacity="0.3" />
+              <line x1="-11" y1={h * 0.6} x2="3" y2={h * 0.6} stroke={color} strokeWidth="0.8" opacity="0.5" />
+              <line x1="-7" y1={h * 0.6 - 2} x2="-4" y2={h * 0.6} stroke={color} strokeWidth="0.6" opacity="0.35" />
+            </g>
+            <g transform={`rotate(25 -10 ${h * 0.8})`}>
+              <ellipse cx="-10" cy={h * 0.8} rx="9" ry="4" fill={color} opacity="0.25" />
+              <line x1="-16" y1={h * 0.8} x2="-4" y2={h * 0.8} stroke={color} strokeWidth="0.8" opacity="0.4" />
+            </g>
+            {/* Thorns on left vine */}
+            {[0.16, 0.3, 0.5, 0.7, 0.88].map((p, i) => (
+              <path key={`tl${i}`} d={`M${-6 + (i % 2) * 4} ${h * p} L${-10 + (i % 2) * 2} ${h * p - 5}`} stroke={thorn} strokeWidth="1.8" opacity="0.45" strokeLinecap="round" />
+            ))}
+            <circle cx="-4" cy={h * 0.48} r="3" fill="#6ac080" opacity="0.3" />
+            <circle cx="-4" cy={h * 0.48} r="1.5" fill="#90d8a0" opacity="0.4" />
+            {/* Right vine */}
+            <path d={`M${w + 6} ${h * 0.12} Q${w + 14} ${h * 0.22} ${w + 8} ${h * 0.32} Q${w - 2} ${h * 0.42} ${w + 10} ${h * 0.52} Q${w + 16} ${h * 0.62} ${w + 6} ${h * 0.72} Q${w - 2} ${h * 0.82} ${w + 8} ${h * 0.92}`} stroke={color} strokeWidth="4" opacity="0.5" strokeLinecap="round" />
+            <path d={`M${w + 4} ${h * 0.2} Q${w + 12} ${h * 0.28} ${w + 6} ${h * 0.36}`} stroke={color} strokeWidth="1.8" opacity="0.25" strokeLinecap="round" />
+            {/* Right leaves */}
+            <g transform={`rotate(35 ${w + 8} ${h * 0.28})`}>
+              <ellipse cx={w + 8} cy={h * 0.28} rx="10" ry="5" fill={color} opacity="0.25" />
+              <line x1={w + 2} y1={h * 0.28} x2={w + 14} y2={h * 0.28} stroke={color} strokeWidth="0.8" opacity="0.45" />
+            </g>
+            <g transform={`rotate(-25 ${w + 6} ${h * 0.5})`}>
+              <ellipse cx={w + 6} cy={h * 0.5} rx="11" ry="5" fill={color} opacity="0.3" />
+              <line x1={w} y1={h * 0.5} x2={w + 12} y2={h * 0.5} stroke={color} strokeWidth="0.8" opacity="0.5" />
+              <line x1={w + 3} y1={h * 0.5 - 2} x2={w + 6} y2={h * 0.5} stroke={color} strokeWidth="0.6" opacity="0.35" />
+            </g>
+            <g transform={`rotate(30 ${w + 10} ${h * 0.72})`}>
+              <ellipse cx={w + 10} cy={h * 0.72} rx="9" ry="4" fill={color} opacity="0.25" />
+              <line x1={w + 4} y1={h * 0.72} x2={w + 16} y2={h * 0.72} stroke={color} strokeWidth="0.8" opacity="0.4" />
+            </g>
+            {[0.24, 0.44, 0.62, 0.82].map((p, i) => (
+              <path key={`tr${i}`} d={`M${w + 6 + (i % 2) * 4} ${h * p} L${w + 10 + (i % 2) * 2} ${h * p - 5}`} stroke={thorn} strokeWidth="1.8" opacity="0.4" strokeLinecap="round" />
+            ))}
+            <circle cx={w + 6} cy={h * 0.62} r="2.5" fill="#6ac080" opacity="0.25" />
+            <circle cx={w + 6} cy={h * 0.62} r="1.2" fill="#90d8a0" opacity="0.35" />
+            {/* Top tendrils — curling up from behind */}
+            <path d={`M${w * 0.25} 4 Q${w * 0.27} -8 ${w * 0.22} -14 Q${w * 0.2} -17 ${w * 0.22} -19`} stroke={color} strokeWidth="2.5" opacity="0.45" strokeLinecap="round" />
+            <path d={`M${w * 0.75} 4 Q${w * 0.77} -10 ${w * 0.72} -16 Q${w * 0.7} -19 ${w * 0.73} -20`} stroke={color} strokeWidth="2.5" opacity="0.45" strokeLinecap="round" />
+            <path d={`M${w * 0.5} 4 Q${w * 0.52} -4 ${w * 0.48} -8`} stroke={color} strokeWidth="1.8" opacity="0.3" strokeLinecap="round" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
+        </>
+      )}
     </Frame>
   );
 }
 
 export function WarriorFrame({ color = "#c43030", w = 200, h = 290 }) {
+  const sx = 26;
+  const sx2 = w - sx;
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="3" />
-      {/* Sword hilt left - prominent protrusion */}
-      <line x1="24" y1="6" x2="24" y2="-16" stroke={color} strokeWidth="3.5" opacity="0.8" strokeLinecap="round" />
-      <path d={`M24 -16 L21 -20 L24 -24 L27 -20 Z`} fill={color} opacity="0.7" /> {/* pommel */}
-      <line x1="14" y1="3" x2="34" y2="3" stroke={color} strokeWidth="3" opacity="0.7" strokeLinecap="round" /> {/* crossguard */}
-      <circle cx="14" cy="3" r="2" fill={color} opacity="0.5" />
-      <circle cx="34" cy="3" r="2" fill={color} opacity="0.5" />
-      {/* Sword hilt right */}
-      <line x1={w - 24} y1="6" x2={w - 24} y2="-16" stroke={color} strokeWidth="3.5" opacity="0.8" strokeLinecap="round" />
-      <path d={`M${w - 24} -16 L${w - 27} -20 L${w - 24} -24 L${w - 21} -20 Z`} fill={color} opacity="0.7" />
-      <line x1={w - 34} y1="3" x2={w - 14} y2="3" stroke={color} strokeWidth="3" opacity="0.7" strokeLinecap="round" />
-      <circle cx={w - 14} cy="3" r="2" fill={color} opacity="0.5" />
-      <circle cx={w - 34} cy="3" r="2" fill={color} opacity="0.5" />
-      {/* Battle scratches */}
-      <line x1="6" y1={h * 0.3} x2="3" y2={h * 0.3 + 28} stroke={color} strokeWidth="2" opacity="0.45" strokeLinecap="round" />
-      <line x1="10" y1={h * 0.3 + 5} x2="7" y2={h * 0.3 + 25} stroke={color} strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
-      <line x1={w - 5} y1={h * 0.6} x2={w - 3} y2={h * 0.6 + 22} stroke={color} strokeWidth="2" opacity="0.4" strokeLinecap="round" />
-      <circle cx="5" cy={h * 0.55} r="3" fill={color} opacity="0.2" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* LEFT SWORD — pommel+grip+crossguard above card, blade dives in */}
+            {/* Pommel */}
+            <ellipse cx={sx} cy="-19" rx="5" ry="4" fill={color} opacity="0.55" stroke={color} strokeWidth="1.5" />
+            <circle cx={sx} cy="-19" r="2" fill={color} opacity="0.3" />
+            {/* Grip — leather wrapped */}
+            <rect x={sx - 3} y="-15" width="6" height="12" rx="2" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.5" opacity="0.7" />
+            {[-12, -9, -6].map((y, i) => (
+              <line key={`gw${i}`} x1={sx - 3} y1={y} x2={sx + 3} y2={y + 2} stroke={color} strokeWidth="1" opacity="0.35" />
+            ))}
+            {/* Crossguard — centered at y=-3, fully outside card */}
+            <rect x={sx - 17} y="-5" width="34" height="6" rx="2" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="2" opacity="0.8" />
+            <circle cx={sx - 17} cy="-2" r="4" fill={color} opacity="0.5" stroke={color} strokeWidth="1.2" />
+            <circle cx={sx + 17} cy="-2" r="4" fill={color} opacity="0.5" stroke={color} strokeWidth="1.2" />
+            <circle cx={sx - 17} cy="-2" r="1.5" fill={color} opacity="0.3" />
+            <circle cx={sx + 17} cy="-2" r="1.5" fill={color} opacity="0.3" />
+            {/* Blade — tapers down into card (gets clipped) */}
+            <path d={`M${sx - 4.5} 1 L${sx - 3.5} 50 L${sx} 70 L${sx + 3.5} 50 L${sx + 4.5} 1`} fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.5" opacity="0.7" strokeLinejoin="round" />
+            <line x1={sx} y1="2" x2={sx} y2="68" stroke={color} strokeWidth="0.8" opacity="0.4" />
+
+            {/* RIGHT SWORD — mirrored */}
+            <ellipse cx={sx2} cy="-19" rx="5" ry="4" fill={color} opacity="0.55" stroke={color} strokeWidth="1.5" />
+            <circle cx={sx2} cy="-19" r="2" fill={color} opacity="0.3" />
+            <rect x={sx2 - 3} y="-15" width="6" height="12" rx="2" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.5" opacity="0.7" />
+            {[-12, -9, -6].map((y, i) => (
+              <line key={`gw2${i}`} x1={sx2 - 3} y1={y} x2={sx2 + 3} y2={y + 2} stroke={color} strokeWidth="1" opacity="0.35" />
+            ))}
+            <rect x={sx2 - 17} y="-5" width="34" height="6" rx="2" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="2" opacity="0.8" />
+            <circle cx={sx2 - 17} cy="-2" r="4" fill={color} opacity="0.5" stroke={color} strokeWidth="1.2" />
+            <circle cx={sx2 + 17} cy="-2" r="4" fill={color} opacity="0.5" stroke={color} strokeWidth="1.2" />
+            <circle cx={sx2 - 17} cy="-2" r="1.5" fill={color} opacity="0.3" />
+            <circle cx={sx2 + 17} cy="-2" r="1.5" fill={color} opacity="0.3" />
+            <path d={`M${sx2 - 4.5} 1 L${sx2 - 3.5} 50 L${sx2} 70 L${sx2 + 3.5} 50 L${sx2 + 4.5} 1`} fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.5" opacity="0.7" strokeLinejoin="round" />
+            <line x1={sx2} y1="2" x2={sx2} y2="68" stroke={color} strokeWidth="0.8" opacity="0.4" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="3" />
+        </>
+      )}
     </Frame>
   );
 }
@@ -221,25 +352,39 @@ export function MonkFrame({ color = "#40b8a8", w = 200, h = 290 }) {
   const hw = w / 2;
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2" />
-      {/* Prominent lotus top center */}
-      <path d={`M${hw - 10} 0 Q${hw} -16 ${hw + 10} 0`} stroke={color} strokeWidth="2.5" opacity="0.65" fill="none" />
-      <path d={`M${hw - 16} 0 Q${hw} -10 ${hw + 16} 0`} stroke={color} strokeWidth="2" opacity="0.45" fill="none" />
-      <path d={`M${hw - 6} 0 Q${hw} -20 ${hw + 6} 0`} stroke={color} strokeWidth="2" opacity="0.55" fill="none" />
-      <circle cx={hw} cy="-4" r="3" fill={color} opacity="0.3" />
-      {/* Bold geometric corners */}
-      {[[6, 6, 1, 1], [w - 6, 6, -1, 1], [6, h - 6, 1, -1], [w - 6, h - 6, -1, -1]].map(([x, y, dx, dy], i) => (
-        <g key={i}>
-          <line x1={x} y1={y} x2={x + dx * 20} y2={y} stroke={color} strokeWidth="1.8" opacity="0.5" />
-          <line x1={x} y1={y} x2={x} y2={y + dy * 20} stroke={color} strokeWidth="1.8" opacity="0.5" />
-          <line x1={x + dx * 6} y1={y + dy * 6} x2={x + dx * 16} y2={y + dy * 6} stroke={color} strokeWidth="1.2" opacity="0.35" />
-          <line x1={x + dx * 6} y1={y + dy * 6} x2={x + dx * 6} y2={y + dy * 16} stroke={color} strokeWidth="1.2" opacity="0.35" />
-        </g>
-      ))}
-      {/* Edge circles */}
-      <circle cx={hw} cy={h} r="4" stroke={color} strokeWidth="1.5" fill={color} fillOpacity="0.1" opacity="0.4" />
-      <circle cx={0} cy={h / 2} r="4" stroke={color} strokeWidth="1.5" fill={color} fillOpacity="0.1" opacity="0.4" />
-      <circle cx={w} cy={h / 2} r="4" stroke={color} strokeWidth="1.5" fill={color} fillOpacity="0.1" opacity="0.4" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Lotus centered on top edge — petals fan out above */}
+            <path d={`M${hw - 5} 4 Q${hw} -24 ${hw + 5} 4`} stroke={color} strokeWidth="2" opacity="0.6" fill={color} fillOpacity="0.08" />
+            <path d={`M${hw - 12} 4 Q${hw} -18 ${hw + 12} 4`} stroke={color} strokeWidth="2.5" opacity="0.65" fill={color} fillOpacity="0.06" />
+            <path d={`M${hw - 18} 2 Q${hw - 10} -12 ${hw} -16 Q${hw + 10} -12 ${hw + 18} 2`} stroke={color} strokeWidth="2" opacity="0.45" fill={color} fillOpacity="0.04" />
+            <path d={`M${hw - 24} 3 Q${hw - 14} -6 ${hw} -10 Q${hw + 14} -6 ${hw + 24} 3`} stroke={color} strokeWidth="1.5" opacity="0.3" fill="none" />
+            <circle cx={hw} cy="-6" r="4" fill={color} opacity="0.25" />
+            <circle cx={hw} cy="-6" r="2" fill={color} opacity="0.45" />
+            {/* Bottom lotus — behind bottom edge */}
+            <path d={`M${hw - 8} ${h - 4} Q${hw} ${h + 14} ${hw + 8} ${h - 4}`} stroke={color} strokeWidth="2" opacity="0.4" fill={color} fillOpacity="0.06" />
+            <path d={`M${hw - 14} ${h - 2} Q${hw} ${h + 10} ${hw + 14} ${h - 2}`} stroke={color} strokeWidth="1.5" opacity="0.3" fill="none" />
+            <circle cx={hw} cy={h + 3} r="3" fill={color} opacity="0.25" />
+            {/* Edge meditation circles */}
+            <circle cx={-2} cy={h / 2} r="6" stroke={color} strokeWidth="1.5" fill={color} fillOpacity="0.08" opacity="0.4" />
+            <circle cx={-2} cy={h / 2} r="2.5" fill={color} opacity="0.3" />
+            <circle cx={w + 2} cy={h / 2} r="6" stroke={color} strokeWidth="1.5" fill={color} fillOpacity="0.08" opacity="0.4" />
+            <circle cx={w + 2} cy={h / 2} r="2.5" fill={color} opacity="0.3" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2" />
+          {/* Geometric corners — on-card decoration */}
+          {[[6, 6, 1, 1], [w - 6, 6, -1, 1], [6, h - 6, 1, -1], [w - 6, h - 6, -1, -1]].map(([x, y, dx, dy], i) => (
+            <g key={i}>
+              <line x1={x} y1={y} x2={x + dx * 22} y2={y} stroke={color} strokeWidth="1.8" opacity="0.5" />
+              <line x1={x} y1={y} x2={x} y2={y + dy * 22} stroke={color} strokeWidth="1.8" opacity="0.5" />
+              <line x1={x + dx * 6} y1={y + dy * 6} x2={x + dx * 18} y2={y + dy * 6} stroke={color} strokeWidth="1.2" opacity="0.35" />
+              <line x1={x + dx * 6} y1={y + dy * 6} x2={x + dx * 6} y2={y + dy * 18} stroke={color} strokeWidth="1.2" opacity="0.35" />
+              <circle cx={x + dx * 3} cy={y + dy * 3} r="1.5" fill={color} opacity="0.3" />
+            </g>
+          ))}
+        </>
+      )}
     </Frame>
   );
 }
@@ -247,49 +392,87 @@ export function MonkFrame({ color = "#40b8a8", w = 200, h = 290 }) {
 export function ArcherFrame({ color = "#5aaa40", w = 200, h = 290 }) {
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
-      {/* Bow along left side */}
-      <path d={`M-2 ${h * 0.15} Q-16 ${h * 0.5} -2 ${h * 0.85}`} stroke={color} strokeWidth="3" opacity="0.6" fill="none" strokeLinecap="round" />
-      {/* Bowstring */}
-      <line x1="-2" y1={h * 0.15} x2="-2" y2={h * 0.85} stroke={color} strokeWidth="1.5" opacity="0.4" />
-      {/* Arrow across top - nocked */}
-      <line x1={w * 0.15} y1="-3" x2={w * 0.85} y2="-3" stroke={color} strokeWidth="2.5" opacity="0.65" strokeLinecap="round" />
-      {/* Arrowhead */}
-      <path d={`M${w * 0.85} -3 L${w * 0.85 + 10} -3`} stroke={color} strokeWidth="2.5" opacity="0.65" strokeLinecap="round" />
-      <path d={`M${w * 0.85 + 6} -8 L${w * 0.85 + 12} -3 L${w * 0.85 + 6} 2`} fill={color} opacity="0.5" />
-      {/* Fletching */}
-      <line x1={w * 0.17} y1="-3" x2={w * 0.13} y2="-9" stroke={color} strokeWidth="1.5" opacity="0.4" />
-      <line x1={w * 0.17} y1="-3" x2={w * 0.13} y2="3" stroke={color} strokeWidth="1.5" opacity="0.4" />
-      <line x1={w * 0.21} y1="-3" x2={w * 0.18} y2="-8" stroke={color} strokeWidth="1.2" opacity="0.35" />
-      <line x1={w * 0.21} y1="-3" x2={w * 0.18} y2="2" stroke={color} strokeWidth="1.2" opacity="0.35" />
-      {/* Small arrows on right edge */}
-      <line x1={w - 2} y1={h * 0.3} x2={w - 2} y2={h * 0.3 + 20} stroke={color} strokeWidth="1.5" opacity="0.3" />
-      <path d={`M${w - 5} ${h * 0.3 + 3} L${w - 2} ${h * 0.3} L${w + 1} ${h * 0.3 + 3}`} stroke={color} strokeWidth="1.2" opacity="0.4" fill="none" />
-      <line x1={w - 2} y1={h * 0.6} x2={w - 2} y2={h * 0.6 + 20} stroke={color} strokeWidth="1.5" opacity="0.3" />
-      <path d={`M${w - 5} ${h * 0.6 + 3} L${w - 2} ${h * 0.6} L${w + 1} ${h * 0.6 + 3}`} stroke={color} strokeWidth="1.2" opacity="0.4" fill="none" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Bow along left side — behind card */}
+            <path d={`M0 ${h * 0.08} Q-22 ${h * 0.5} 0 ${h * 0.92}`} stroke={color} strokeWidth="4.5" opacity="0.6" fill="none" strokeLinecap="round" />
+            <path d={`M0 ${h * 0.08} Q-18 ${h * 0.5} 0 ${h * 0.92}`} stroke={color} strokeWidth="2" opacity="0.3" fill="none" />
+            <path d={`M-2 ${h * 0.08} L-5 ${h * 0.06} L0 ${h * 0.05}`} stroke={color} strokeWidth="2" opacity="0.55" strokeLinecap="round" fill="none" />
+            <path d={`M-2 ${h * 0.92} L-5 ${h * 0.94} L0 ${h * 0.95}`} stroke={color} strokeWidth="2" opacity="0.55" strokeLinecap="round" fill="none" />
+            <line x1="0" y1={h * 0.08} x2="0" y2={h * 0.92} stroke={color} strokeWidth="1.2" opacity="0.4" />
+            {[0.46, 0.48, 0.50, 0.52, 0.54].map((p, i) => (
+              <line key={`bw${i}`} x1="-9" y1={h * p} x2="-4" y2={h * (p + 0.01)} stroke={color} strokeWidth="1.5" opacity="0.3" strokeLinecap="round" />
+            ))}
+            {/* Arrow across top — behind top edge */}
+            <line x1={w * 0.1} y1="-4" x2={w * 0.84} y2="-4" stroke={color} strokeWidth="3" opacity="0.65" strokeLinecap="round" />
+            <path d={`M${w * 0.84} -4 L${w * 0.94} -4`} stroke={color} strokeWidth="2.5" opacity="0.65" strokeLinecap="round" />
+            <path d={`M${w * 0.9} -11 L${w * 0.97} -4 L${w * 0.9} 3`} fill={color} opacity="0.55" stroke={color} strokeWidth="1" strokeLinejoin="round" />
+            <line x1={w * 0.9} y1="-11" x2={w * 0.9} y2="3" stroke={color} strokeWidth="0.8" opacity="0.4" />
+            <path d={`M${w * 0.14} -4 Q${w * 0.1} -11 ${w * 0.07} -13`} stroke={color} strokeWidth="1.8" opacity="0.45" fill="none" strokeLinecap="round" />
+            <path d={`M${w * 0.14} -4 Q${w * 0.1} 3 ${w * 0.07} 5`} stroke={color} strokeWidth="1.8" opacity="0.45" fill="none" strokeLinecap="round" />
+            <path d={`M${w * 0.18} -4 Q${w * 0.14} -10 ${w * 0.12} -11`} stroke={color} strokeWidth="1.2" opacity="0.35" fill="none" strokeLinecap="round" />
+            <path d={`M${w * 0.18} -4 Q${w * 0.14} 2 ${w * 0.12} 3`} stroke={color} strokeWidth="1.2" opacity="0.35" fill="none" strokeLinecap="round" />
+            {/* Quiver arrows — behind right edge */}
+            {[0.26, 0.32, 0.38].map((p, i) => (
+              <g key={`qa${i}`}>
+                <line x1={w + 2} y1={h * p} x2={w + 2} y2={h * p + 28} stroke={color} strokeWidth="2" opacity={0.35 - i * 0.05} strokeLinecap="round" />
+                <path d={`M${w - 1} ${h * p + 2} L${w + 2} ${h * p} L${w + 5} ${h * p + 2}`} stroke={color} strokeWidth="1.5" opacity={0.4 - i * 0.05} fill="none" />
+              </g>
+            ))}
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
+        </>
+      )}
     </Frame>
   );
 }
 
 export function RogueFrame({ color = "#8068a0", w = 200, h = 290 }) {
+  const dx = 30;
+  const dx2 = w - dx;
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2" />
-      {/* LEFT DAGGER - prominent, clear blade shape */}
-      <path d={`M26 8 L29 -6 L30 -18 L28 -18 L26 8`} fill={color} opacity="0.5" /> {/* blade */}
-      <line x1="28" y1="8" x2="29" y2="-18" stroke={color} strokeWidth="1" opacity="0.8" /> {/* center line */}
-      <path d={`M29 -18 L28 -22 L30 -22 Z`} fill={color} opacity="0.7" /> {/* tip */}
-      <line x1="20" y1="5" x2="36" y2="5" stroke={color} strokeWidth="3" opacity="0.7" strokeLinecap="round" /> {/* crossguard */}
-      <rect x="26" y="6" width="5" height="8" rx="1" fill={color} opacity="0.3" /> {/* grip */}
-      {/* RIGHT DAGGER */}
-      <path d={`M${w - 26} 8 L${w - 29} -6 L${w - 30} -18 L${w - 28} -18 L${w - 26} 8`} fill={color} opacity="0.5" />
-      <line x1={w - 28} y1="8" x2={w - 29} y2="-18" stroke={color} strokeWidth="1" opacity="0.8" />
-      <path d={`M${w - 29} -18 L${w - 28} -22 L${w - 30} -22 Z`} fill={color} opacity="0.7" />
-      <line x1={w - 20} y1="5" x2={w - 36} y2="5" stroke={color} strokeWidth="3" opacity="0.7" strokeLinecap="round" />
-      <rect x={w - 31} y="6" width="5" height="8" rx="1" fill={color} opacity="0.3" />
-      {/* Shadow wisps */}
-      <path d={`M0 ${h * 0.3} Q-10 ${h * 0.4} -3 ${h * 0.48} Q6 ${h * 0.56} 0 ${h * 0.65}`} stroke={color} strokeWidth="2" opacity="0.3" />
-      <path d={`M${w} ${h * 0.4} Q${w + 8} ${h * 0.5} ${w + 2} ${h * 0.58} Q${w - 5} ${h * 0.66} ${w} ${h * 0.75}`} stroke={color} strokeWidth="2" opacity="0.25" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* LEFT DAGGER — hilt+guard above card, blade dives down */}
+            {/* Pommel — faceted gem */}
+            <path d={`M${dx - 3} -18 L${dx} -22 L${dx + 3} -18 L${dx} -14 Z`} fill={color} opacity="0.55" stroke={color} strokeWidth="1.5" />
+            <circle cx={dx} cy="-18" r="1.5" fill={color} opacity="0.3" />
+            {/* Grip — wrapped leather, thinner than sword */}
+            <rect x={dx - 2.5} y="-14" width="5" height="11" rx="1.5" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.5" opacity="0.7" />
+            {[-11, -7].map((y, i) => (
+              <line key={`dg${i}`} x1={dx - 2.5} y1={y} x2={dx + 2.5} y2={y + 1.5} stroke={color} strokeWidth="0.8" opacity="0.35" />
+            ))}
+            {/* Guard — curved S-shape, centered at y=-3 (outside card) */}
+            <path d={`M${dx - 15} -5 Q${dx - 8} 0 ${dx} -3 Q${dx + 8} -6 ${dx + 15} -1`} stroke={color} strokeWidth="2.5" opacity="0.8" fill="none" strokeLinecap="round" />
+            <circle cx={dx - 15} cy="-5" r="2.5" fill={color} opacity="0.45" stroke={color} strokeWidth="0.8" />
+            <circle cx={dx + 15} cy="-1" r="2.5" fill={color} opacity="0.45" stroke={color} strokeWidth="0.8" />
+            {/* Blade — slim stiletto, dives into card */}
+            <path d={`M${dx - 3} -1 L${dx - 2} 40 L${dx} 58 L${dx + 2} 40 L${dx + 3} -1`} fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.2" opacity="0.65" strokeLinejoin="round" />
+            <line x1={dx} y1="0" x2={dx} y2="56" stroke={color} strokeWidth="0.6" opacity="0.35" />
+
+            {/* RIGHT DAGGER — mirrored */}
+            <path d={`M${dx2 - 3} -18 L${dx2} -22 L${dx2 + 3} -18 L${dx2} -14 Z`} fill={color} opacity="0.55" stroke={color} strokeWidth="1.5" />
+            <circle cx={dx2} cy="-18" r="1.5" fill={color} opacity="0.3" />
+            <rect x={dx2 - 2.5} y="-14" width="5" height="11" rx="1.5" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.5" opacity="0.7" />
+            {[-11, -7].map((y, i) => (
+              <line key={`dg2${i}`} x1={dx2 - 2.5} y1={y} x2={dx2 + 2.5} y2={y + 1.5} stroke={color} strokeWidth="0.8" opacity="0.35" />
+            ))}
+            <path d={`M${dx2 - 15} -1 Q${dx2 - 8} -6 ${dx2} -3 Q${dx2 + 8} 0 ${dx2 + 15} -5`} stroke={color} strokeWidth="2.5" opacity="0.8" fill="none" strokeLinecap="round" />
+            <circle cx={dx2 - 15} cy="-1" r="2.5" fill={color} opacity="0.45" stroke={color} strokeWidth="0.8" />
+            <circle cx={dx2 + 15} cy="-5" r="2.5" fill={color} opacity="0.45" stroke={color} strokeWidth="0.8" />
+            <path d={`M${dx2 - 3} -1 L${dx2 - 2} 40 L${dx2} 58 L${dx2 + 2} 40 L${dx2 + 3} -1`} fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1.2" opacity="0.65" strokeLinejoin="round" />
+            <line x1={dx2} y1="0" x2={dx2} y2="56" stroke={color} strokeWidth="0.6" opacity="0.35" />
+
+            {/* Shadow wisps — behind card edges */}
+            <path d={`M-2 ${h * 0.2} Q-14 ${h * 0.32} -4 ${h * 0.44} Q6 ${h * 0.56} -6 ${h * 0.66} Q-14 ${h * 0.76} -2 ${h * 0.85}`} stroke={color} strokeWidth="2.5" opacity="0.3" strokeLinecap="round" />
+            <path d={`M${w + 2} ${h * 0.28} Q${w + 12} ${h * 0.4} ${w + 4} ${h * 0.52} Q${w - 4} ${h * 0.62} ${w + 6} ${h * 0.72} Q${w + 12} ${h * 0.8} ${w + 2} ${h * 0.88}`} stroke={color} strokeWidth="2.5" opacity="0.25" strokeLinecap="round" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2" />
+        </>
+      )}
     </Frame>
   );
 }
@@ -298,24 +481,37 @@ export function CorruptorFrame({ color = "#8a40c0", w = 200, h = 290 }) {
   const gc = "#50b050";
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
-      {/* Tentacle from top-left wrapping around */}
-      <path d={`M-6 ${h * 0.05} Q-14 ${h * 0.12} -8 ${h * 0.2} Q4 ${h * 0.28} -4 ${h * 0.36} Q-12 ${h * 0.44} -2 ${h * 0.5}`} stroke={color} strokeWidth="4" opacity="0.55" strokeLinecap="round" />
-      <path d={`M-2 ${h * 0.5} Q8 ${h * 0.54} 12 ${h * 0.5}`} stroke={color} strokeWidth="3" opacity="0.4" strokeLinecap="round" /> {/* tendril onto card */}
-      {/* Tentacle from right wrapping */}
-      <path d={`M${w + 6} ${h * 0.3} Q${w + 12} ${h * 0.38} ${w + 4} ${h * 0.46} Q${w - 6} ${h * 0.54} ${w + 2} ${h * 0.62} Q${w + 10} ${h * 0.7} ${w + 2} ${h * 0.78}`} stroke={color} strokeWidth="4" opacity="0.5" strokeLinecap="round" />
-      <path d={`M${w + 2} ${h * 0.62} Q${w - 8} ${h * 0.64} ${w - 14} ${h * 0.6}`} stroke={color} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
-      {/* Tentacle from bottom */}
-      <path d={`M${w * 0.3} ${h + 6} Q${w * 0.28} ${h + 14} ${w * 0.35} ${h + 16} Q${w * 0.42} ${h + 12} ${w * 0.38} ${h + 18}`} stroke={gc} strokeWidth="3" opacity="0.4" strokeLinecap="round" />
-      <path d={`M${w * 0.6} ${h + 4} Q${w * 0.65} ${h + 12} ${w * 0.58} ${h + 16}`} stroke={gc} strokeWidth="3" opacity="0.35" strokeLinecap="round" />
-      <path d={`M${w * 0.8} ${h + 2} Q${w * 0.84} ${h + 10} ${w * 0.78} ${h + 14}`} stroke={gc} strokeWidth="2.5" opacity="0.3" strokeLinecap="round" />
-      {/* Suction cups / nodes on tentacles */}
-      <circle cx="-6" cy={h * 0.28} r="3" fill={color} opacity="0.25" />
-      <circle cx="-10" cy={h * 0.13} r="2.5" fill={color} opacity="0.2" />
-      <circle cx={w + 8} cy={h * 0.46} r="3" fill={color} opacity="0.2" />
-      <circle cx={w + 6} cy={h * 0.7} r="2.5" fill={color} opacity="0.2" />
-      {/* Green corruption veins on edges */}
-      <path d={`M0 ${h * 0.7} Q6 ${h * 0.74} 3 ${h * 0.8} Q-2 ${h * 0.86} 2 ${h * 0.92}`} stroke={gc} strokeWidth="2" opacity="0.35" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Left tentacle — gripping from behind left edge */}
+            <path d={`M-8 ${h * 0.02} Q-18 ${h * 0.1} -10 ${h * 0.2} Q4 ${h * 0.28} -8 ${h * 0.36} Q-16 ${h * 0.44} -2 ${h * 0.52} Q8 ${h * 0.58} -6 ${h * 0.66} Q-14 ${h * 0.72} -4 ${h * 0.8}`} stroke={color} strokeWidth="5.5" opacity="0.55" strokeLinecap="round" />
+            {[0.1, 0.2, 0.32, 0.44, 0.56, 0.68, 0.76].map((p, i) => (
+              <g key={`sl${i}`}>
+                <circle cx={-8 + (i % 2) * 8} cy={h * p} r={4 - i * 0.3} fill={color} opacity="0.2" />
+                <circle cx={-8 + (i % 2) * 8} cy={h * p} r={1.8} stroke={color} strokeWidth="0.8" fill="none" opacity="0.3" />
+              </g>
+            ))}
+            {/* Right tentacle — gripping from behind right edge */}
+            <path d={`M${w + 8} ${h * 0.18} Q${w + 16} ${h * 0.28} ${w + 6} ${h * 0.38} Q${w - 4} ${h * 0.46} ${w + 6} ${h * 0.54} Q${w + 14} ${h * 0.62} ${w + 4} ${h * 0.72} Q${w - 4} ${h * 0.8} ${w + 4} ${h * 0.88}`} stroke={color} strokeWidth="5.5" opacity="0.5" strokeLinecap="round" />
+            {[0.28, 0.38, 0.5, 0.62, 0.74, 0.84].map((p, i) => (
+              <g key={`sr${i}`}>
+                <circle cx={w + 8 - (i % 2) * 8} cy={h * p} r={4 - i * 0.3} fill={color} opacity="0.18" />
+                <circle cx={w + 8 - (i % 2) * 8} cy={h * p} r={1.8} stroke={color} strokeWidth="0.8" fill="none" opacity="0.25" />
+              </g>
+            ))}
+            {/* Bottom tentacles — green corruption from behind */}
+            <path d={`M${w * 0.15} ${h - 4} Q${w * 0.12} ${h + 14} ${w * 0.2} ${h + 18} Q${w * 0.28} ${h + 12} ${w * 0.24} ${h + 20}`} stroke={gc} strokeWidth="4" opacity="0.4" strokeLinecap="round" />
+            <path d={`M${w * 0.45} ${h - 2} Q${w * 0.5} ${h + 14} ${w * 0.42} ${h + 18}`} stroke={gc} strokeWidth="3.5" opacity="0.35" strokeLinecap="round" />
+            <path d={`M${w * 0.7} ${h - 2} Q${w * 0.74} ${h + 12} ${w * 0.68} ${h + 16}`} stroke={gc} strokeWidth="3.5" opacity="0.35" strokeLinecap="round" />
+            <path d={`M${w * 0.88} ${h - 2} Q${w * 0.92} ${h + 8} ${w * 0.86} ${h + 12}`} stroke={gc} strokeWidth="2.5" opacity="0.25" strokeLinecap="round" />
+            {/* Green corruption veins behind edges */}
+            <path d={`M2 ${h * 0.68} Q-6 ${h * 0.74} -2 ${h * 0.82} Q6 ${h * 0.88} -4 ${h * 0.94} Q-8 ${h * 0.98} 0 ${h + 4}`} stroke={gc} strokeWidth="2.5" opacity="0.35" strokeLinecap="round" />
+            <path d={`M${w - 2} ${h * 0.78} Q${w + 6} ${h * 0.84} ${w + 2} ${h * 0.9} Q${w - 4} ${h * 0.96} ${w + 2} ${h + 4}`} stroke={gc} strokeWidth="2.5" opacity="0.3" strokeLinecap="round" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
+        </>
+      )}
     </Frame>
   );
 }
@@ -378,29 +574,52 @@ export function WraithHunterFrame({ color = "#90a8b8", w = 200, h = 290 }) {
   const hw = w / 2;
   return (
     <Frame w={w} h={h}>
-      <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
-      {/* Silver medallion hanging from top center */}
-      <circle cx={hw} cy="-10" r="8" stroke={color} strokeWidth="2.5" fill={color} fillOpacity="0.12" opacity="0.75" />
-      <circle cx={hw} cy="-10" r="4" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <circle cx={hw} cy="-10" r="1.5" fill={color} opacity="0.6" />
-      {/* Chain connecting medallion to card */}
-      <line x1={hw} y1="-2" x2={hw} y2="0" stroke={color} strokeWidth="2" opacity="0.6" />
-      {/* Runic chains left side */}
-      {[0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84].map((p, i) => (
-        <g key={`l${i}`}>
-          <ellipse cx="1" cy={h * p} rx="5" ry="7" stroke={color} strokeWidth="1.8" fill="none" opacity={0.35 + (i % 2) * 0.1} />
-          {i % 3 === 0 && <line x1="5" y1={h * p} x2="9" y2={h * p} stroke={color} strokeWidth="1.5" opacity="0.3" />}
-        </g>
-      ))}
-      {/* Runic chains right side */}
-      {[0.18, 0.3, 0.42, 0.54, 0.66, 0.78, 0.9].map((p, i) => (
-        <g key={`r${i}`}>
-          <ellipse cx={w - 1} cy={h * p} rx="5" ry="7" stroke={color} strokeWidth="1.8" fill="none" opacity={0.35 + (i % 2) * 0.1} />
-          {i % 3 === 0 && <line x1={w - 5} y1={h * p} x2={w - 9} y2={h * p} stroke={color} strokeWidth="1.5" opacity="0.3" />}
-        </g>
-      ))}
-      {/* Silver inner trim */}
-      <path d={rrect(w - 10, h - 10, 9)} stroke={color} strokeWidth="0.7" opacity="0.2" transform="translate(5,5)" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Silver medallion centered on top edge — peeking from behind */}
+            <circle cx={hw} cy="0" r="14" fill={color} fillOpacity="0.1" />
+            <circle cx={hw} cy="0" r="14" stroke={color} strokeWidth="2.5" fill="none" opacity="0.75" />
+            <circle cx={hw} cy="0" r="9" stroke={color} strokeWidth="1.5" fill="none" opacity="0.45" />
+            <circle cx={hw} cy="0" r="4" fill={color} opacity="0.5" />
+            <line x1={hw} y1="-10" x2={hw} y2="-18" stroke={color} strokeWidth="2" opacity="0.5" strokeLinecap="round" />
+            <line x1={hw - 10} y1="-2" x2={hw - 16} y2="-6" stroke={color} strokeWidth="1.8" opacity="0.4" strokeLinecap="round" />
+            <line x1={hw + 10} y1="-2" x2={hw + 16} y2="-6" stroke={color} strokeWidth="1.8" opacity="0.4" strokeLinecap="round" />
+            <line x1={hw} y1="-14" x2={hw - 6} y2="-19" stroke={color} strokeWidth="1.2" opacity="0.3" strokeLinecap="round" />
+            <line x1={hw} y1="-14" x2={hw + 6} y2="-19" stroke={color} strokeWidth="1.2" opacity="0.3" strokeLinecap="round" />
+            {/* Runic chains left side — behind left edge */}
+            {[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map((p, i) => (
+              <g key={`l${i}`}>
+                <ellipse cx="-2" cy={h * p} rx="7" ry="9" stroke={color} strokeWidth="2.2" fill="none" opacity={0.3 + (i % 2) * 0.12} />
+                {i % 3 === 0 && (
+                  <g>
+                    <line x1="-6" y1={h * p} x2="-12" y2={h * p} stroke={color} strokeWidth="1.5" opacity="0.3" />
+                    <line x1="-9" y1={h * p - 3} x2="-9" y2={h * p + 3} stroke={color} strokeWidth="1" opacity="0.25" />
+                  </g>
+                )}
+              </g>
+            ))}
+            {/* Runic chains right side — behind right edge */}
+            {[0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95].map((p, i) => (
+              <g key={`r${i}`}>
+                <ellipse cx={w + 2} cy={h * p} rx="7" ry="9" stroke={color} strokeWidth="2.2" fill="none" opacity={0.3 + (i % 2) * 0.12} />
+                {i % 3 === 0 && (
+                  <g>
+                    <line x1={w + 6} y1={h * p} x2={w + 12} y2={h * p} stroke={color} strokeWidth="1.5" opacity="0.3" />
+                    <line x1={w + 9} y1={h * p - 3} x2={w + 9} y2={h * p + 3} stroke={color} strokeWidth="1" opacity="0.25" />
+                  </g>
+                )}
+              </g>
+            ))}
+            {/* Bottom pendant — behind bottom edge */}
+            <circle cx={hw} cy={h} r="8" stroke={color} strokeWidth="1.8" fill={color} fillOpacity="0.08" opacity="0.4" />
+            <circle cx={hw} cy={h} r="3.5" fill={color} opacity="0.3" />
+            <line x1={hw} y1={h + 8} x2={hw} y2={h + 14} stroke={color} strokeWidth="1.5" opacity="0.25" strokeLinecap="round" />
+          </g>
+          <path d={rrect(w, h)} stroke={color} strokeWidth="2.5" />
+          <path d={rrect(w - 10, h - 10, 9)} stroke={color} strokeWidth="0.7" opacity="0.2" transform="translate(5,5)" />
+        </>
+      )}
     </Frame>
   );
 }
@@ -409,31 +628,61 @@ export function BattlemageFrame({ color = "#a040c0", w = 200, h = 290 }) {
   const m = "#d04040";
   const a = "#4060d0";
   const hw = w / 2;
+  const stx = w + 8;
   return (
     <Frame w={w} h={h}>
-      {/* Split border */}
-      <path d={`M14 0 H${hw}`} stroke={m} strokeWidth="3" opacity="0.85" />
-      <path d={`M${hw} 0 H${w - 14} Q${w} 0 ${w} 14`} stroke={a} strokeWidth="3" opacity="0.85" />
-      <path d={`M0 14 Q0 0 14 0`} stroke={m} strokeWidth="3" opacity="0.85" />
-      <path d={`M0 14 V${h - 14} Q0 ${h} 14 ${h}`} stroke={m} strokeWidth="3" opacity="0.85" />
-      <path d={`M${w} 14 V${h - 14} Q${w} ${h} ${w - 14} ${h}`} stroke={a} strokeWidth="3" opacity="0.85" />
-      <path d={`M14 ${h} H${hw}`} stroke={m} strokeWidth="3" opacity="0.85" />
-      <path d={`M${hw} ${h} H${w - 14}`} stroke={a} strokeWidth="3" opacity="0.85" />
-      {/* Shield on left side */}
-      <path d={`M-4 ${h * 0.3} L-12 ${h * 0.32} L-14 ${h * 0.5} L-8 ${h * 0.65} L-2 ${h * 0.6} L-4 ${h * 0.3} Z`} stroke={m} strokeWidth="2.5" fill={m} fillOpacity="0.15" opacity="0.65" strokeLinejoin="round" />
-      <line x1="-9" y1={h * 0.38} x2="-6" y2={h * 0.55} stroke={m} strokeWidth="1.5" opacity="0.4" />
-      <line x1="-11" y1={h * 0.45} x2="-5" y2={h * 0.5} stroke={m} strokeWidth="1.5" opacity="0.35" />
-      {/* Magic staff on right side */}
-      <line x1={w + 4} y1={h * 0.2} x2={w + 4} y2={h * 0.72} stroke={a} strokeWidth="3" opacity="0.6" strokeLinecap="round" />
-      {/* Staff orb */}
-      <circle cx={w + 4} cy={h * 0.2} r="6" stroke={a} strokeWidth="2" fill={a} fillOpacity="0.15" opacity="0.6" />
-      <circle cx={w + 4} cy={h * 0.2} r="2.5" fill={a} opacity="0.5" />
-      {/* Staff base */}
-      <circle cx={w + 4} cy={h * 0.72} r="2" fill={a} opacity="0.4" />
-      {/* Convergence at top */}
-      <line x1={hw - 14} y1="3" x2={hw} y2="3" stroke={m} strokeWidth="2.5" opacity="0.5" />
-      <line x1={hw} y1="3" x2={hw + 14} y2="3" stroke={a} strokeWidth="2.5" opacity="0.5" />
-      <circle cx={hw} cy="3" r="3.5" fill={color} opacity="0.55" />
+      {(clipId) => (
+        <>
+          <g clipPath={`url(#${clipId})`}>
+            {/* Shield on left side — kite shape behind left edge */}
+            <path d={`M2 ${h * 0.24} L-10 ${h * 0.28} L-16 ${h * 0.46} L-8 ${h * 0.7} L2 ${h * 0.64} Z`} stroke={m} strokeWidth="2.5" fill={m} fillOpacity="0.12" opacity="0.65" strokeLinejoin="round" />
+            <path d={`M0 ${h * 0.3} L-8 ${h * 0.34} L-12 ${h * 0.44} L-6 ${h * 0.62} L0 ${h * 0.58} Z`} stroke={m} strokeWidth="1" fill="none" opacity="0.3" strokeLinejoin="round" />
+            <line x1="-8" y1={h * 0.34} x2="-8" y2={h * 0.62} stroke={m} strokeWidth="1.5" opacity="0.35" />
+            <line x1="-12" y1={h * 0.46} x2="0" y2={h * 0.46} stroke={m} strokeWidth="1.5" opacity="0.3" />
+            <circle cx="-6" cy={h * 0.46} r="2.5" fill={m} opacity="0.25" />
+            {/* Magic staff — protruding further right, from top to bottom */}
+            <line x1={stx} y1={h * 0.08} x2={stx} y2={h * 0.88} stroke={a} strokeWidth="4.5" opacity="0.65" strokeLinecap="round" />
+            {/* Staff wood grain */}
+            <line x1={stx - 1} y1={h * 0.2} x2={stx - 1} y2={h * 0.85} stroke={a} strokeWidth="0.6" opacity="0.2" />
+            <line x1={stx + 1.5} y1={h * 0.25} x2={stx + 1.5} y2={h * 0.8} stroke={a} strokeWidth="0.6" opacity="0.15" />
+            {/* Grip wrapping — more bands */}
+            {[0.48, 0.51, 0.54, 0.57, 0.60, 0.63].map((p, i) => (
+              <line key={`sw${i}`} x1={stx - 3} y1={h * p} x2={stx + 3} y2={h * (p + 0.012)} stroke={a} strokeWidth="1.8" opacity="0.35" strokeLinecap="round" />
+            ))}
+            {/* Orb — bigger, more glow layers */}
+            <circle cx={stx} cy={h * 0.08} r="13" fill={a} fillOpacity="0.06" />
+            <circle cx={stx} cy={h * 0.08} r="13" stroke={a} strokeWidth="2" fill="none" opacity="0.55" />
+            <circle cx={stx} cy={h * 0.08} r="9" stroke={a} strokeWidth="1.2" fill="none" opacity="0.35" strokeDasharray="3 2" />
+            <circle cx={stx} cy={h * 0.08} r="5" fill={a} opacity="0.4" />
+            <circle cx={stx} cy={h * 0.08} r="2.5" fill="#8090ff" opacity="0.6" />
+            {/* Arcane sparkles around orb */}
+            {[[-8, -10], [11, -6], [9, 11], [-6, 9], [0, -14], [13, 2]].map(([ddx, dy], i) => (
+              <g key={`sp${i}`}>
+                <circle cx={stx + ddx} cy={h * 0.08 + dy} r="1.5" fill={a} opacity={0.45 - i * 0.04} />
+                <line x1={stx + ddx - 2} y1={h * 0.08 + dy} x2={stx + ddx + 2} y2={h * 0.08 + dy} stroke={a} strokeWidth="0.5" opacity={0.3 - i * 0.03} />
+              </g>
+            ))}
+            {/* Orb cradle — prongs holding the orb */}
+            <path d={`M${stx - 2} ${h * 0.08 + 13} Q${stx - 6} ${h * 0.08 + 6} ${stx - 5} ${h * 0.08 - 4}`} stroke={a} strokeWidth="1.5" opacity="0.45" fill="none" />
+            <path d={`M${stx + 2} ${h * 0.08 + 13} Q${stx + 6} ${h * 0.08 + 6} ${stx + 5} ${h * 0.08 - 4}`} stroke={a} strokeWidth="1.5" opacity="0.45" fill="none" />
+            {/* Staff base — pointed ferrule */}
+            <path d={`M${stx - 3} ${h * 0.86} L${stx} ${h * 0.92} L${stx + 3} ${h * 0.86}`} stroke={a} strokeWidth="2" opacity="0.45" fill={a} fillOpacity="0.15" />
+            {/* Convergence node centered on top edge */}
+            <circle cx={hw} cy="0" r="6" fill={color} opacity="0.4" />
+            <circle cx={hw} cy="0" r="3" fill="#fff" opacity="0.2" />
+            <line x1={hw - 20} y1="0" x2={hw - 6} y2="0" stroke={m} strokeWidth="2.5" opacity="0.5" strokeLinecap="round" />
+            <line x1={hw + 6} y1="0" x2={hw + 20} y2="0" stroke={a} strokeWidth="2.5" opacity="0.5" strokeLinecap="round" />
+          </g>
+          {/* Split border — drawn on top */}
+          <path d={`M14 0 H${hw}`} stroke={m} strokeWidth="3" opacity="0.85" />
+          <path d={`M${hw} 0 H${w - 14} Q${w} 0 ${w} 14`} stroke={a} strokeWidth="3" opacity="0.85" />
+          <path d={`M0 14 Q0 0 14 0`} stroke={m} strokeWidth="3" opacity="0.85" />
+          <path d={`M0 14 V${h - 14} Q0 ${h} 14 ${h}`} stroke={m} strokeWidth="3" opacity="0.85" />
+          <path d={`M${w} 14 V${h - 14} Q${w} ${h} ${w - 14} ${h}`} stroke={a} strokeWidth="3" opacity="0.85" />
+          <path d={`M14 ${h} H${hw}`} stroke={m} strokeWidth="3" opacity="0.85" />
+          <path d={`M${hw} ${h} H${w - 14}`} stroke={a} strokeWidth="3" opacity="0.85" />
+        </>
+      )}
     </Frame>
   );
 }
@@ -442,7 +691,7 @@ export function BattlemageFrame({ color = "#a040c0", w = 200, h = 290 }) {
 //  RESOLVER
 // ═══════════════════════════════════
 
-const BASE_FRAMES = { STEEL_CRITICAL: SteelCriticalFrame, ENERGY_CRITICAL: EnergyCriticalFrame, NEUTRAL: NeutralFrame, ENCOUNTER: EncounterFrame, STAT: StatFrame };
+const BASE_FRAMES = { STEEL_CRITICAL: SteelCriticalFrame, MIGHT_CRITICAL: MightCriticalFrame, NEUTRAL: NeutralFrame, ENCOUNTER: EncounterFrame, STAT: StatFrame };
 const CLASS_FRAMES = { musician: MusicianFrame, disciple: DiscipleFrame, wildborn: WildbornFrame, warrior: WarriorFrame, monk: MonkFrame, archer: ArcherFrame, rogue: RogueFrame, corruptor: CorruptorFrame, wizard: WizardFrame, wraith_hunter: WraithHunterFrame, battlemage: BattlemageFrame };
 
 export function getFrameComponent(cardType, classThemeId) {

@@ -9,7 +9,7 @@ export const META = {
 
 export const CARD_TYPES = {
   STEEL_CRITICAL: "STEEL_CRITICAL",
-  ENERGY_CRITICAL: "ENERGY_CRITICAL",
+  MIGHT_CRITICAL: "MIGHT_CRITICAL",
   NEUTRAL: "NEUTRAL",
   ENCOUNTER: "ENCOUNTER",
   STAT: "STAT",
@@ -37,6 +37,13 @@ export const DEFAULT_DECK_TEMPLATE = {
     },
   ],
 };
+
+export const SKILL_CHECKS = [
+  "Lifting", "Athletics", "Thievery", "Reflex", "Stealth",
+  "Knowledge", "Arcana", "Investigation", "Medicine", "Perception",
+  "Survival", "Animal Handling", "Insight", "Religion",
+  "Seduction", "Performance", "Persuasion", "Deception", "Intimidation",
+];
 
 export const DEFAULT_SETTINGS = {
   visibility: "dm-only", // "dm-only" | "table"

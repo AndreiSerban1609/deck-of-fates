@@ -2,7 +2,7 @@ import { CARD_TYPES } from "./constants.js";
 
 let cardIdCounter = 0;
 
-function makeCard(type, name, modifier, description = "", classTheme = null) {
+function makeCard(type, name, modifier, description = "", extra = null) {
   const card = {
     id: `card-${++cardIdCounter}-${Date.now()}`,
     type,
@@ -10,27 +10,26 @@ function makeCard(type, name, modifier, description = "", classTheme = null) {
     modifier,
     description,
   };
-  if (classTheme) card.classTheme = classTheme;
+  if (extra) {
+    if (extra.classTheme) card.classTheme = extra.classTheme;
+    if (extra.checkType) card.checkType = extra.checkType;
+    if (extra.redrawModifier != null) card.redrawModifier = extra.redrawModifier;
+    if (extra.redrawDescription) card.redrawDescription = extra.redrawDescription;
+  }
   return card;
 }
 
-/**
- * Build a full deck from a template + player class cards.
- * Always includes exactly 2 criticals (1 Steel, 1 Energy).
- */
 export function buildDeck(template, classCards = []) {
   cardIdCounter = 0;
   const cards = [];
 
-  // Always 2 criticals
   cards.push(
-    makeCard(CARD_TYPES.STEEL_CRITICAL, "Steel Critical", null, "Forged in iron resolve.")
+    makeCard(CARD_TYPES.STEEL_CRITICAL, "Steel Critical", null)
   );
   cards.push(
-    makeCard(CARD_TYPES.ENERGY_CRITICAL, "Energy Critical", null, "Pure arcane surge.")
+    makeCard(CARD_TYPES.MIGHT_CRITICAL, "Might Critical", null)
   );
 
-  // Neutral cards
   for (let i = 0; i < (template.neutralCount || 0); i++) {
     cards.push(makeCard(CARD_TYPES.NEUTRAL, "Neutral", 0, "No twist of fate."));
   }
@@ -49,10 +48,14 @@ export function buildDeck(template, classCards = []) {
     );
   }
 
-  // Class-specific cards
   for (const cls of classCards) {
     cards.push(
-      makeCard(CARD_TYPES.CLASS, cls.name, cls.modifier, cls.description, cls.classTheme)
+      makeCard(CARD_TYPES.CLASS, cls.name, cls.modifier, cls.description, {
+        classTheme: cls.classTheme,
+        checkType: cls.checkType,
+        redrawModifier: cls.redrawModifier,
+        redrawDescription: cls.redrawDescription,
+      })
     );
   }
 
@@ -88,12 +91,15 @@ export function getModifierDisplay(card) {
   if (!card) return "";
   if (
     card.type === CARD_TYPES.STEEL_CRITICAL ||
-    card.type === CARD_TYPES.ENERGY_CRITICAL
+    card.type === CARD_TYPES.MIGHT_CRITICAL
   ) {
     return "CRITICAL";
   }
+  if (card.type === CARD_TYPES.NEUTRAL) {
+    return "";
+  }
   if (card.type === CARD_TYPES.STAT) {
-    return "STAT MOD";
+    return "STAT";
   }
   if (card.modifier === null || card.modifier === undefined) return "?";
   if (card.modifier === 0) return "±0";

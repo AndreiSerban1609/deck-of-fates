@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { CLASS_LIST } from "../lib/classThemes.js";
+import { SKILL_CHECKS } from "../lib/constants.js";
 
 export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTemplate, onSavePlayerConfigs, onBack }) {
   const [tab, setTab] = useState("base");
@@ -59,7 +60,13 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
   const updateClassCard = (playerId, idx, field, value) => {
     const cfg = getPlayerConfig(playerId);
     const cards = [...cfg.classCards];
-    cards[idx] = { ...cards[idx], [field]: field === "modifier" ? Number(value) : value };
+    cards[idx] = { ...cards[idx], [field]: (field === "modifier" || field === "redrawModifier") ? Number(value) : value };
+    if (field === "redrawModifier" && (value === "" || value === undefined)) {
+      delete cards[idx].redrawModifier;
+      delete cards[idx].redrawDescription;
+    }
+    if (field === "redrawDescription" && !value) delete cards[idx].redrawDescription;
+    if (field === "checkType" && !value) delete cards[idx].checkType;
     const updated = { ...configs, [playerId]: { ...cfg, classCards: cards } };
     setConfigs(updated);
     onSavePlayerConfigs(updated);
@@ -264,6 +271,39 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                       <input type="number" value={cls.modifier} onChange={(e) => updateClassCard(member.id, idx, "modifier", e.target.value)} className="input-modifier" />
                     </div>
                     <textarea value={cls.description} onChange={(e) => updateClassCard(member.id, idx, "description", e.target.value)} placeholder="Flavor text / bonus effects..." className="input-description" rows={2} />
+                    <div className="card-edit-row" style={{ gap: 8, alignItems: "center" }}>
+                      <select
+                        value={cls.checkType || ""}
+                        onChange={(e) => updateClassCard(member.id, idx, "checkType", e.target.value)}
+                        className="input-class-select"
+                        style={{ flex: 1 }}
+                        title="Skill check type"
+                      >
+                        <option value="">No check type</option>
+                        {SKILL_CHECKS.map((sk) => (
+                          <option key={sk} value={sk}>{sk}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={cls.redrawModifier ?? ""}
+                        onChange={(e) => updateClassCard(member.id, idx, "redrawModifier", e.target.value)}
+                        placeholder="↻ mod"
+                        className="input-modifier"
+                        title="Redraw modifier (optional)"
+                        style={{ width: 56 }}
+                      />
+                    </div>
+                    {cls.redrawModifier != null && (
+                      <input
+                        type="text"
+                        value={cls.redrawDescription || ""}
+                        onChange={(e) => updateClassCard(member.id, idx, "redrawDescription", e.target.value)}
+                        placeholder="Redraw effect description (shown on hover)..."
+                        className="input-name"
+                        style={{ fontSize: 11 }}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

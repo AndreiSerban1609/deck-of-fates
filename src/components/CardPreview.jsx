@@ -4,8 +4,8 @@ import { CardFace, CardBack } from "./CardArt.jsx";
 
 const PREVIEW_CARDS = [
   // Base cards
-  { type: CARD_TYPES.STEEL_CRITICAL, name: "Steel Critical", modifier: null, description: "Forged in iron resolve." },
-  { type: CARD_TYPES.ENERGY_CRITICAL, name: "Energy Critical", modifier: null, description: "Pure arcane surge." },
+  { type: CARD_TYPES.STEEL_CRITICAL, name: "Steel Critical", modifier: null },
+  { type: CARD_TYPES.MIGHT_CRITICAL, name: "Might Critical", modifier: null },
   { type: CARD_TYPES.NEUTRAL, name: "Neutral", modifier: 0, description: "No twist of fate." },
   { type: CARD_TYPES.ENCOUNTER, name: "Stumble", modifier: -1, description: "You lose your footing at the worst moment." },
   { type: CARD_TYPES.STAT, name: "Stat", modifier: null, description: "Your ability shapes the outcome." },
@@ -13,10 +13,10 @@ const PREVIEW_CARDS = [
   { type: CARD_TYPES.CLASS, name: "Encore", modifier: 3, description: "The crowd roars — play it again.", classTheme: "musician" },
   { type: CARD_TYPES.CLASS, name: "Hand of God", modifier: 5, description: "Divine intervention guides your hand.", classTheme: "disciple" },
   { type: CARD_TYPES.CLASS, name: "Storm Call", modifier: 2, description: "Thunder answers your fury.", classTheme: "wildborn" },
-  { type: CARD_TYPES.CLASS, name: "Berserker Rage", modifier: 4, description: "Pain fuels your strength.", classTheme: "warrior" },
+  { type: CARD_TYPES.CLASS, name: "Berserker Rage", modifier: 4, description: "Pain fuels your strength.", classTheme: "warrior", checkType: "Athletics" },
   { type: CARD_TYPES.CLASS, name: "Inner Peace", modifier: 2, description: "Stillness becomes your weapon.", classTheme: "monk" },
   { type: CARD_TYPES.CLASS, name: "True Shot", modifier: 3, description: "The arrow finds its mark.", classTheme: "archer" },
-  { type: CARD_TYPES.CLASS, name: "Shadow Step", modifier: 3, description: "Vanish into darkness.", classTheme: "rogue" },
+  { type: CARD_TYPES.CLASS, name: "Shadow Step", modifier: 3, description: "Vanish into darkness.", classTheme: "rogue", checkType: "Stealth", redrawModifier: 3, redrawDescription: "Apply +3 modifier, then draw another card from the deck" },
   { type: CARD_TYPES.CLASS, name: "Patron's Price", modifier: -3, description: "Power demands its toll.", classTheme: "corruptor" },
   { type: CARD_TYPES.CLASS, name: "Arcane Surge", modifier: 4, description: "Raw magic bends to your will.", classTheme: "wizard" },
   { type: CARD_TYPES.CLASS, name: "Silver Ward", modifier: 2, description: "Runes flare against the unholy.", classTheme: "wraith_hunter" },
