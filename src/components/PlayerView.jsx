@@ -37,7 +37,12 @@ export function PlayerView({ settings }) {
 
     const unsubMeta = OBR.room.onMetadataChange((meta) => {
       const current = meta[META.CURRENT_DRAW];
-      setLastDraw(current || null);
+      if (current) {
+        setDrawKey((k) => k + 1);
+        setLastDraw(current);
+      } else {
+        setLastDraw(null);
+      }
     });
 
     return () => {
