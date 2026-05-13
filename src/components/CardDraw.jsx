@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { buildDeck, shuffle, drawCard } from "../lib/deck.js";
 import { EXTENSION_ID } from "../lib/constants.js";
@@ -17,6 +17,7 @@ export function CardDraw({
   const [phase, setPhase] = useState("select"); // "select" | "ready" | "drawn"
   const [animating, setAnimating] = useState(false);
   const [redrawing, setRedrawing] = useState(false);
+  const drawCountRef = useRef(0);
 
   const selectPlayer = (member) => {
     setSelectedPlayer(member);
@@ -37,10 +38,11 @@ export function CardDraw({
 
     const { drawnCard: card, remaining } = drawCard(deck);
 
-    setAnimating(true);
+    setAnimating(false);
     setDrawnCard(card);
     setCurrentDeck(remaining);
     setPhase("drawn");
+    drawCountRef.current += 1;
 
     // Broadcast to table if visibility is "table"
     if (settings.visibility === "table" && card) {
@@ -55,7 +57,10 @@ export function CardDraw({
       }
     }
 
-    setTimeout(() => setAnimating(false), 500);
+    requestAnimationFrame(() => {
+      setAnimating(true);
+      setTimeout(() => setAnimating(false), 500);
+    });
   }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings]);
 
   const doRedraw = useCallback(() => {
@@ -148,7 +153,7 @@ export function CardDraw({
 
         {phase === "drawn" && drawnCard && (
           <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}`}>
-            <CardFace card={drawnCard} size={200} animating={animating} />
+            <CardFace key={drawCountRef.current} card={drawnCard} size={200} animating={animating} />
           </div>
         )}
       </div>
