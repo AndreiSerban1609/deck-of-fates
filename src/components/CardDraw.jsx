@@ -16,6 +16,7 @@ export function CardDraw({
   const [drawnCard, setDrawnCard] = useState(null);
   const [phase, setPhase] = useState("select"); // "select" | "ready" | "drawn"
   const [animating, setAnimating] = useState(false);
+  const [redrawing, setRedrawing] = useState(false);
 
   const selectPlayer = (member) => {
     setSelectedPlayer(member);
@@ -58,8 +59,11 @@ export function CardDraw({
   }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings]);
 
   const doRedraw = useCallback(() => {
-    // Gamble-style: forfeit current card, draw next from remaining deck
-    doDraw();
+    setRedrawing(true);
+    setTimeout(() => {
+      doDraw();
+      setRedrawing(false);
+    }, 350);
   }, [doDraw]);
 
   const resolve = () => {
@@ -143,7 +147,7 @@ export function CardDraw({
         )}
 
         {phase === "drawn" && drawnCard && (
-          <div className="drawn-card-area">
+          <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}`}>
             <CardFace card={drawnCard} size={200} animating={animating} />
           </div>
         )}

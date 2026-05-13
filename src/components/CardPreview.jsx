@@ -1,6 +1,13 @@
 import React from "react";
 import { CARD_TYPES } from "../lib/constants.js";
-import { CardFace, CardBack } from "./CardArt.jsx";
+import { CardFace, CardBack, SkillIcon } from "./CardArt.jsx";
+
+const SKILL_CHECKS = [
+  "Lifting", "Athletics", "Thievery", "Reflex", "Stealth", "Knowledge",
+  "Arcana", "Investigation", "Medicine", "Perception", "Survival",
+  "Animal Handling", "Insight", "Religion", "Seduction", "Performance",
+  "Persuasion", "Deception", "Intimidation",
+];
 
 const PREVIEW_CARDS = [
   // Base cards
@@ -77,6 +84,42 @@ export function CardPreview() {
           <CardSlot key={i} label={`${card.classTheme} · ${card.name}`}>
             <CardFace card={{ ...card, id: `preview-class-${i}` }} size={180} />
           </CardSlot>
+        ))}
+      </div>
+
+      {/* Skill Check Icons */}
+      <SectionLabel>Skill Check Icons</SectionLabel>
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: 4,
+        maxWidth: 600,
+        margin: "0 auto",
+      }}>
+        {SKILL_CHECKS.map((skill) => (
+          <div key={skill} style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+            padding: "12px 10px",
+            background: "#1a1a24",
+            borderRadius: 8,
+            border: "1px solid #2a2a3a",
+            width: 80,
+          }}>
+            <SkillIcon skill={skill} color="#e0a040" size={28} />
+            <span style={{
+              fontSize: 9,
+              color: "#9a9688",
+              letterSpacing: 0.5,
+              textAlign: "center",
+              fontFamily: "'Crimson Text', Georgia, serif",
+            }}>
+              {skill}
+            </span>
+          </div>
         ))}
       </div>
     </div>
