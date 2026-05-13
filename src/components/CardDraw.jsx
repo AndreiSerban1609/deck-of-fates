@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { buildDeck, shuffle, drawCard } from "../lib/deck.js";
 import { EXTENSION_ID } from "../lib/constants.js";
@@ -16,7 +16,7 @@ export function CardDraw({
   const [drawnCard, setDrawnCard] = useState(null);
   const [phase, setPhase] = useState("select"); // "select" | "ready" | "drawn"
   const [redrawing, setRedrawing] = useState(false);
-  const drawCountRef = useRef(0);
+  const [drawCount, setDrawCount] = useState(0);
 
   const selectPlayer = (member) => {
     setSelectedPlayer(member);
@@ -37,7 +37,7 @@ export function CardDraw({
 
     const { drawnCard: card, remaining } = drawCard(deck);
 
-    drawCountRef.current += 1;
+    setDrawCount((c) => c + 1);
     setDrawnCard(card);
     setCurrentDeck(remaining);
     setPhase("drawn");
@@ -49,13 +49,13 @@ export function CardDraw({
           playerId: selectedPlayer.id,
           playerName: selectedPlayer.name,
           card,
-          drawCount: drawCountRef.current,
+          drawCount,
         });
       } catch (e) {
         console.warn("[DeckOfFates] Broadcast failed:", e);
       }
     }
-  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings]);
+  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, drawCount]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -147,7 +147,7 @@ export function CardDraw({
 
         {phase === "drawn" && drawnCard && (
           <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}`}>
-            <CardFace key={drawCountRef.current} card={drawnCard} size={200} animating={true} />
+            <CardFace key={drawCount} card={drawnCard} size={200} animating={true} />
           </div>
         )}
       </div>
