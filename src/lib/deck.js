@@ -19,7 +19,7 @@ function makeCard(type, name, modifier, description = "", extra = null) {
   return card;
 }
 
-export function buildDeck(template, classCards = []) {
+export function buildDeck(template, classCards = [], exclusions = null) {
   cardIdCounter = 0;
   const cards = [];
 
@@ -30,19 +30,26 @@ export function buildDeck(template, classCards = []) {
     makeCard(CARD_TYPES.MIGHT_CRITICAL, "Might Critical", null)
   );
 
-  for (let i = 0; i < (template.neutralCount || 0); i++) {
+  const effectiveNeutrals = Math.max(0,
+    (template.neutralCount || 0) - (exclusions?.neutralExcludeCount || 0)
+  );
+  for (let i = 0; i < effectiveNeutrals; i++) {
     cards.push(makeCard(CARD_TYPES.NEUTRAL, "Neutral", 0, "No twist of fate."));
   }
 
-  // Stat cards
-  for (let i = 0; i < (template.statCount || 0); i++) {
+  const effectiveStats = Math.max(0,
+    (template.statCount || 0) - (exclusions?.statExcludeCount || 0)
+  );
+  for (let i = 0; i < effectiveStats; i++) {
     cards.push(
       makeCard(CARD_TYPES.STAT, "Stat", null, "Your ability shapes the outcome.")
     );
   }
 
-  // Encounter cards (each is unique with its own name/modifier/description)
-  for (const enc of template.encounterCards || []) {
+  const excludedEncounters = new Set(exclusions?.encounters || []);
+  for (let i = 0; i < (template.encounterCards || []).length; i++) {
+    if (excludedEncounters.has(i)) continue;
+    const enc = template.encounterCards[i];
     cards.push(
       makeCard(CARD_TYPES.ENCOUNTER, enc.name, enc.modifier, enc.description)
     );
@@ -60,6 +67,16 @@ export function buildDeck(template, classCards = []) {
   }
 
   return cards;
+}
+
+export function getEffectiveDeckSize(template, config = {}) {
+  const exc = config.excludedCards || {};
+  const neutrals = Math.max(0, (template.neutralCount || 0) - (exc.neutralExcludeCount || 0));
+  const stats = Math.max(0, (template.statCount || 0) - (exc.statExcludeCount || 0));
+  const excludedEnc = new Set(exc.encounters || []);
+  const encounters = (template.encounterCards || []).filter((_, i) => !excludedEnc.has(i)).length;
+  const classCount = (config.classCards || []).length;
+  return 2 + neutrals + stats + encounters + classCount;
 }
 
 /**

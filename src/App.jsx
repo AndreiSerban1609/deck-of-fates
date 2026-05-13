@@ -3,10 +3,11 @@ import { useOBR, useRoomMetadata } from "./hooks/useOBR.js";
 import { CardDraw } from "./components/CardDraw.jsx";
 import { DeckEditor } from "./components/DeckEditor.jsx";
 import { PlayerView } from "./components/PlayerView.jsx";
+import { PlayerDeckEditor } from "./components/PlayerDeckEditor.jsx";
 import { CardPreview } from "./components/CardPreview.jsx";
 
 export default function App() {
-  const { ready, isGM, partyMembers, theme } = useOBR();
+  const { ready, isGM, playerId, playerName, partyMembers, theme } = useOBR();
   const {
     deckTemplate,
     playerConfigs,
@@ -17,6 +18,7 @@ export default function App() {
   } = useRoomMetadata();
 
   const [view, setView] = useState("draw");
+  const [playerView, setPlayerView] = useState("waiting");
   const [showPreview, setShowPreview] = useState(false);
 
   // If OBR doesn't connect within 2s, show standalone card preview
@@ -47,8 +49,27 @@ export default function App() {
       <div className="app" data-theme={theme?.mode || "DARK"}>
         <div className="app-header">
           <h1 className="app-title">Deck of Fates</h1>
+          <div className="header-actions">
+            <button
+              className="btn-icon"
+              onClick={() => setPlayerView(playerView === "editor" ? "waiting" : "editor")}
+              title="Edit My Deck"
+            >
+              ⚙
+            </button>
+          </div>
         </div>
-        <PlayerView settings={settings} />
+        {playerView === "waiting" && <PlayerView settings={settings} />}
+        {playerView === "editor" && (
+          <PlayerDeckEditor
+            playerId={playerId}
+            playerName={playerName}
+            deckTemplate={deckTemplate}
+            playerConfig={playerConfigs[playerId] || { classCards: [], proficiency: 0 }}
+            onSave={(cfg) => savePlayerConfigs({ ...playerConfigs, [playerId]: cfg })}
+            onBack={() => setPlayerView("waiting")}
+          />
+        )}
       </div>
     );
   }

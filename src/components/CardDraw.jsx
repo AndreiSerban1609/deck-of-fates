@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import OBR from "@owlbear-rodeo/sdk";
-import { buildDeck, shuffle, drawCard } from "../lib/deck.js";
+import { buildDeck, shuffle, drawCard, getEffectiveDeckSize } from "../lib/deck.js";
 import { EXTENSION_ID, META } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
 
@@ -37,8 +37,8 @@ export function CardDraw({
     let deck = currentDeck;
 
     if (!deck) {
-      const classCards = playerConfigs[selectedPlayer.id]?.classCards || [];
-      const fullDeck = buildDeck(deckTemplate, classCards);
+      const cfg = playerConfigs[selectedPlayer.id] || {};
+      const fullDeck = buildDeck(deckTemplate, cfg.classCards || [], cfg.excludedCards || null);
       deck = shuffle(fullDeck);
     }
 
@@ -143,12 +143,7 @@ export function CardDraw({
               <div className="player-dot" style={{ background: member.color }} />
               <span>{member.name}</span>
               <span className="player-cards-badge">
-                {2 +
-                  (deckTemplate.neutralCount || 0) +
-                  (deckTemplate.statCount || 0) +
-                  (deckTemplate.encounterCards || []).length +
-                  (playerConfigs[member.id]?.classCards?.length || 0)}{" "}
-                cards
+                {getEffectiveDeckSize(deckTemplate, playerConfigs[member.id] || {})} cards
               </span>
             </button>
           ))}

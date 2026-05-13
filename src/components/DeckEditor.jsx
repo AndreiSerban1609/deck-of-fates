@@ -32,12 +32,62 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
   const removeEncounterCard = (idx) => {
     const enc = [...(template.encounterCards || [])];
     enc.splice(idx, 1);
-    updateTemplate("encounterCards", enc);
+    const updatedTemplate = { ...template, encounterCards: enc };
+    setTemplate(updatedTemplate);
+    // Reindex player encounter exclusions
+    const updatedConfigs = { ...configs };
+    for (const [pid, cfg] of Object.entries(updatedConfigs)) {
+      const excEnc = cfg.excludedCards?.encounters;
+      if (!excEnc?.length) continue;
+      updatedConfigs[pid] = {
+        ...cfg,
+        excludedCards: {
+          ...cfg.excludedCards,
+          encounters: excEnc
+            .filter((i) => i !== idx)
+            .map((i) => (i > idx ? i - 1 : i)),
+        },
+      };
+    }
+    setConfigs(updatedConfigs);
+    onSaveTemplate(updatedTemplate);
+    onSavePlayerConfigs(updatedConfigs);
   };
 
   // --- Player Class Cards ---
 
-  const getPlayerConfig = (id) => configs[id] || { classCards: [], proficiency: 0 };
+  const getPlayerConfig = (id) => configs[id] || { classCards: [], proficiency: 0, excludedCards: {} };
+
+  const updateExclusion = (playerId, key, value) => {
+    const cfg = getPlayerConfig(playerId);
+    const updated = {
+      ...configs,
+      [playerId]: {
+        ...cfg,
+        excludedCards: { ...(cfg.excludedCards || {}), [key]: value },
+      },
+    };
+    setConfigs(updated);
+    onSavePlayerConfigs(updated);
+  };
+
+  const toggleEncounterExclusion = (playerId, idx) => {
+    const cfg = getPlayerConfig(playerId);
+    const current = new Set(cfg.excludedCards?.encounters || []);
+    if (current.has(idx)) current.delete(idx);
+    else current.add(idx);
+    updateExclusion(playerId, "encounters", [...current]);
+  };
+
+  const resetExclusions = (playerId) => {
+    const cfg = getPlayerConfig(playerId);
+    const updated = {
+      ...configs,
+      [playerId]: { ...cfg, excludedCards: {} },
+    };
+    setConfigs(updated);
+    onSavePlayerConfigs(updated);
+  };
 
   const updateProficiency = (playerId, value) => {
     const cfg = getPlayerConfig(playerId);
@@ -247,6 +297,53 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                     <button onClick={() => updateProficiency(member.id, (cfg.proficiency || 0) + 1)}>+</button>
                   </div>
                 </div>
+
+                {/* Deck exclusions */}
+                {(() => {
+                  const exc = cfg.excludedCards || {};
+                  const effNeutrals = Math.max(0, (template.neutralCount || 0) - (exc.neutralExcludeCount || 0));
+                  const effStats = Math.max(0, (template.statCount || 0) - (exc.statExcludeCount || 0));
+                  const hasExclusions = (exc.neutralExcludeCount || 0) > 0 || (exc.statExcludeCount || 0) > 0 || (exc.encounters || []).length > 0;
+                  return (
+                    <div style={{ marginBottom: 6, padding: "4px 0", borderBottom: "1px solid #2a2a3a" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, color: "#5e5c54", letterSpacing: 1, textTransform: "uppercase" }}>Base Deck Overrides</span>
+                        {hasExclusions && (
+                          <button className="btn-tiny" onClick={() => resetExclusions(member.id)} title="Reset to full base deck">Reset</button>
+                        )}
+                      </div>
+                      <div className="field-row" style={{ marginBottom: 2 }}>
+                        <label style={{ fontSize: 11 }}>Neutrals</label>
+                        <div className="stepper">
+                          <button onClick={() => updateExclusion(member.id, "neutralExcludeCount", Math.min(template.neutralCount || 0, (exc.neutralExcludeCount || 0) + 1))} disabled={effNeutrals <= 0}>−</button>
+                          <span style={{ fontSize: 11 }}>{effNeutrals}/{template.neutralCount || 0}</span>
+                          <button onClick={() => updateExclusion(member.id, "neutralExcludeCount", Math.max(0, (exc.neutralExcludeCount || 0) - 1))} disabled={(exc.neutralExcludeCount || 0) <= 0}>+</button>
+                        </div>
+                      </div>
+                      <div className="field-row" style={{ marginBottom: 2 }}>
+                        <label style={{ fontSize: 11 }}>Stats</label>
+                        <div className="stepper">
+                          <button onClick={() => updateExclusion(member.id, "statExcludeCount", Math.min(template.statCount || 0, (exc.statExcludeCount || 0) + 1))} disabled={effStats <= 0}>−</button>
+                          <span style={{ fontSize: 11 }}>{effStats}/{template.statCount || 0}</span>
+                          <button onClick={() => updateExclusion(member.id, "statExcludeCount", Math.max(0, (exc.statExcludeCount || 0) - 1))} disabled={(exc.statExcludeCount || 0) <= 0}>+</button>
+                        </div>
+                      </div>
+                      {(template.encounterCards || []).map((enc, idx) => {
+                        const excluded = (exc.encounters || []).includes(idx);
+                        return (
+                          <div key={idx} className="field-row" style={{ marginBottom: 1 }}>
+                            <label style={{ fontSize: 11, color: excluded ? "#5e5c54" : "#d4c9a8", textDecoration: excluded ? "line-through" : "none" }}>
+                              {enc.name} ({enc.modifier >= 0 ? "+" : ""}{enc.modifier})
+                            </label>
+                            <button className={`btn-tiny ${excluded ? "btn-tiny-danger" : ""}`} onClick={() => toggleEncounterExclusion(member.id, idx)} style={{ minWidth: 36 }}>
+                              {excluded ? "Off" : "On"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {/* Export / Import / Clear row */}
                 <div className="player-actions-row">
