@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { buildDeck, shuffle, drawCard } from "../lib/deck.js";
-import { EXTENSION_ID } from "../lib/constants.js";
+import { EXTENSION_ID, META } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
 
 export function CardDraw({
@@ -42,20 +42,21 @@ export function CardDraw({
     setCurrentDeck(remaining);
     setPhase("drawn");
 
-    // Broadcast to table if visibility is "table"
+    // Persist + broadcast to table if visibility is "table"
     if (settings.visibility === "table" && card) {
+      const drawData = {
+        playerId: selectedPlayer.id,
+        playerName: selectedPlayer.name,
+        card,
+      };
       try {
-        OBR.broadcast.sendMessage(`${EXTENSION_ID}/cardDrawn`, {
-          playerId: selectedPlayer.id,
-          playerName: selectedPlayer.name,
-          card,
-          drawCount,
-        });
+        OBR.room.setMetadata({ [META.CURRENT_DRAW]: drawData });
+        OBR.broadcast.sendMessage(`${EXTENSION_ID}/cardDrawn`, drawData);
       } catch (e) {
         console.warn("[DeckOfFates] Broadcast failed:", e);
       }
     }
-  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, drawCount]);
+  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -71,9 +72,10 @@ export function CardDraw({
     setCurrentDeck(null);
     setPhase("ready");
 
-    // Broadcast resolution
+    // Clear persisted draw + broadcast resolution
     if (settings.visibility === "table") {
       try {
+        OBR.room.setMetadata({ [META.CURRENT_DRAW]: null });
         OBR.broadcast.sendMessage(`${EXTENSION_ID}/cardResolved`, {
           playerId: selectedPlayer.id,
         });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import OBR from "@owlbear-rodeo/sdk";
-import { EXTENSION_ID } from "../lib/constants.js";
+import { EXTENSION_ID, META } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
 
 export function PlayerView({ settings }) {
@@ -10,6 +10,18 @@ export function PlayerView({ settings }) {
   useEffect(() => {
     if (!OBR.isAvailable) return;
 
+    const unsubReady = OBR.onReady(async () => {
+      // Load persisted draw so late joiners see the current card
+      try {
+        const meta = await OBR.room.getMetadata();
+        const persisted = meta[META.CURRENT_DRAW];
+        if (persisted) setLastDraw(persisted);
+      } catch (e) {
+        console.warn("[DeckOfFates] Failed to read current draw:", e);
+      }
+    });
+
+    // Live updates via broadcast (triggers animation)
     const unsubDraw = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardDrawn`,
       (event) => {
@@ -25,9 +37,17 @@ export function PlayerView({ settings }) {
       }
     );
 
+    // Metadata changes as fallback (e.g. player joins mid-draw, or broadcast missed)
+    const unsubMeta = OBR.room.onMetadataChange((meta) => {
+      const current = meta[META.CURRENT_DRAW];
+      setLastDraw(current || null);
+    });
+
     return () => {
+      unsubReady();
       unsubDraw();
       unsubResolve();
+      unsubMeta();
     };
   }, []);
 
