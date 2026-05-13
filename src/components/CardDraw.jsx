@@ -4,58 +4,55 @@ import { buildDeck, shuffle, drawCard, getEffectiveDeckSize } from "../lib/deck.
 import { EXTENSION_ID, META, CARD_TYPES } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
 
-function DeckInfoPanel({ fullDeck, currentDeck, drawnCard }) {
-  const counts = (cards) => {
-    const c = { crit: 0, neutral: 0, stat: 0, encounter: 0, class: 0 };
-    for (const card of cards) {
-      if (card.type === CARD_TYPES.STEEL_CRITICAL || card.type === CARD_TYPES.MIGHT_CRITICAL) c.crit++;
-      else if (card.type === CARD_TYPES.NEUTRAL) c.neutral++;
-      else if (card.type === CARD_TYPES.STAT) c.stat++;
-      else if (card.type === CARD_TYPES.ENCOUNTER) c.encounter++;
-      else if (card.type === CARD_TYPES.CLASS) c.class++;
-    }
-    return c;
-  };
+const TYPE_LABELS = {
+  [CARD_TYPES.STEEL_CRITICAL]: "Crit",
+  [CARD_TYPES.MIGHT_CRITICAL]: "Crit",
+  [CARD_TYPES.NEUTRAL]: "Neutral",
+  [CARD_TYPES.STAT]: "Stat",
+  [CARD_TYPES.ENCOUNTER]: "Encounter",
+  [CARD_TYPES.CLASS]: "Class",
+};
 
-  const total = counts(fullDeck);
-  const remaining = currentDeck ? counts(currentDeck) : total;
-  const hasDrawn = currentDeck !== null;
+const TYPE_ORDER = [
+  CARD_TYPES.STEEL_CRITICAL, CARD_TYPES.MIGHT_CRITICAL,
+  CARD_TYPES.NEUTRAL, CARD_TYPES.STAT, CARD_TYPES.ENCOUNTER, CARD_TYPES.CLASS,
+];
 
-  const rows = [
-    { label: "Crits", key: "crit" },
-    { label: "Neutral", key: "neutral" },
-    { label: "Stat", key: "stat" },
-    { label: "Encounter", key: "encounter" },
-    { label: "Class", key: "class" },
-  ];
+function DeckInfoPanel({ fullDeck, currentDeck, onClose }) {
+  const remainingIds = currentDeck ? new Set(currentDeck.map((c) => c.id)) : null;
+
+  const sorted = [...fullDeck].sort(
+    (a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type)
+  );
+
+  const totalCount = fullDeck.length;
+  const leftCount = currentDeck ? currentDeck.length : totalCount;
 
   return (
-    <div className="deck-info-panel">
-      <div className="deck-info-header">Deck Breakdown</div>
-      <div className="deck-info-grid">
-        <span className="deck-info-label" />
-        <span className="deck-info-col-header">Total</span>
-        {hasDrawn && <span className="deck-info-col-header">Left</span>}
-        {rows.map((r) => (
-          <React.Fragment key={r.key}>
-            <span className="deck-info-label">{r.label}</span>
-            <span className="deck-info-value">{total[r.key]}</span>
-            {hasDrawn && (
-              <span className={`deck-info-value${remaining[r.key] < total[r.key] ? " deck-info-changed" : ""}`}>
-                {remaining[r.key]}
-              </span>
-            )}
-          </React.Fragment>
-        ))}
-        <React.Fragment>
-          <span className="deck-info-label deck-info-total">Total</span>
-          <span className="deck-info-value deck-info-total">{fullDeck.length}</span>
-          {hasDrawn && (
-            <span className="deck-info-value deck-info-total deck-info-changed">
-              {currentDeck.length}
-            </span>
-          )}
-        </React.Fragment>
+    <div className="deck-info-overlay" onClick={onClose}>
+      <div className="deck-info-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="deck-info-header">
+          <span>Deck — {leftCount}/{totalCount} remaining</span>
+          <button className="btn-ghost deck-info-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="deck-info-list">
+          {sorted.map((card) => {
+            const drawn = remainingIds !== null && !remainingIds.has(card.id);
+            return (
+              <div key={card.id} className={`deck-info-card${drawn ? " drawn" : ""}`}>
+                <span className={`deck-info-type deck-info-type--${card.type.toLowerCase()}`}>
+                  {TYPE_LABELS[card.type]}
+                </span>
+                <span className="deck-info-name">{card.name}</span>
+                {card.modifier != null && (
+                  <span className="deck-info-mod">
+                    {card.modifier >= 0 ? "+" : ""}{card.modifier}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -238,16 +235,19 @@ export function CardDraw({
         </button>
       </div>
 
-      {/* Deck info panel */}
-      {showDeckInfo && fullDeck && (
-        <DeckInfoPanel fullDeck={fullDeck} currentDeck={currentDeck} drawnCard={drawnCard} />
-      )}
-
-      {/* Build deck preview before first draw */}
-      {showDeckInfo && !fullDeck && selectedPlayer && (() => {
-        const cfg = playerConfigs[selectedPlayer.id] || {};
-        const preview = buildDeck(deckTemplate, cfg.classCards || [], cfg.excludedCards || null);
-        return <DeckInfoPanel fullDeck={preview} currentDeck={null} drawnCard={null} />;
+      {/* Deck info slide-out */}
+      {showDeckInfo && (() => {
+        const deck = fullDeck || (() => {
+          const cfg = playerConfigs[selectedPlayer.id] || {};
+          return buildDeck(deckTemplate, cfg.classCards || [], cfg.excludedCards || null);
+        })();
+        return (
+          <DeckInfoPanel
+            fullDeck={deck}
+            currentDeck={currentDeck}
+            onClose={() => setShowDeckInfo(false)}
+          />
+        );
       })()}
 
       {/* Card area */}
