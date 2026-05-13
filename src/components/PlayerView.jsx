@@ -5,7 +5,7 @@ import { CardFace, CardBack } from "./CardArt.jsx";
 
 export function PlayerView({ settings }) {
   const [lastDraw, setLastDraw] = useState(null);
-  const [animating, setAnimating] = useState(false);
+  const [drawKey, setDrawKey] = useState(0);
 
   useEffect(() => {
     if (!OBR.isAvailable) return;
@@ -13,9 +13,8 @@ export function PlayerView({ settings }) {
     const unsubDraw = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardDrawn`,
       (event) => {
-        setAnimating(true);
+        setDrawKey((k) => k + 1);
         setLastDraw(event.data);
-        setTimeout(() => setAnimating(false), 500);
       }
     );
 
@@ -58,7 +57,7 @@ export function PlayerView({ settings }) {
             <div className="player-draw-label">
               {lastDraw.playerName}'s draw:
             </div>
-            <CardFace card={lastDraw.card} size={200} animating={animating} />
+            <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
           </>
         )}
       </div>
