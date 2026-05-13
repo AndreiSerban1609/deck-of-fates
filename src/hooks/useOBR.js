@@ -14,7 +14,7 @@ export function useOBR() {
   useEffect(() => {
     if (!OBR.isAvailable) return;
 
-    const unsubReady = OBR.onReady(async () => {
+    OBR.onReady(async () => {
       const [r, id, name, t, party] = await Promise.all([
         OBR.player.getRole(),
         OBR.player.getId(),
@@ -37,7 +37,6 @@ export function useOBR() {
     });
 
     return () => {
-      unsubReady();
       unsubs.current.forEach((fn) => fn());
       unsubs.current = [];
     };
@@ -57,7 +56,7 @@ export function useRoomMetadata() {
   useEffect(() => {
     if (!OBR.isAvailable) return;
 
-    const unsubReady = OBR.onReady(async () => {
+    OBR.onReady(async () => {
       try {
         const meta = await OBR.room.getMetadata();
         if (meta[META.DECK_TEMPLATE]) setDeckTemplate(meta[META.DECK_TEMPLATE]);
@@ -75,7 +74,6 @@ export function useRoomMetadata() {
     });
 
     return () => {
-      unsubReady();
       unsub.current?.();
     };
   }, []);

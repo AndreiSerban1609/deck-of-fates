@@ -12,7 +12,7 @@ export function PlayerView({ settings }) {
 
     let unsubMeta = null;
 
-    const unsubReady = OBR.onReady(async () => {
+    OBR.onReady(async () => {
       try {
         const meta = await OBR.room.getMetadata();
         const persisted = meta[META.CURRENT_DRAW];
@@ -48,7 +48,6 @@ export function PlayerView({ settings }) {
     );
 
     return () => {
-      unsubReady();
       unsubDraw();
       unsubResolve();
       unsubMeta?.();
