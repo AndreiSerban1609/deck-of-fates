@@ -11,7 +11,6 @@ export function PlayerView({ settings }) {
     if (!OBR.isAvailable) return;
 
     const unsubReady = OBR.onReady(async () => {
-      // Load persisted draw so late joiners see the current card
       try {
         const meta = await OBR.room.getMetadata();
         const persisted = meta[META.CURRENT_DRAW];
@@ -21,7 +20,6 @@ export function PlayerView({ settings }) {
       }
     });
 
-    // Live updates via broadcast (triggers animation)
     const unsubDraw = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardDrawn`,
       (event) => {
@@ -37,7 +35,6 @@ export function PlayerView({ settings }) {
       }
     );
 
-    // Metadata changes as fallback (e.g. player joins mid-draw, or broadcast missed)
     const unsubMeta = OBR.room.onMetadataChange((meta) => {
       const current = meta[META.CURRENT_DRAW];
       setLastDraw(current || null);
@@ -51,6 +48,17 @@ export function PlayerView({ settings }) {
     };
   }, []);
 
+  const requestRedraw = async () => {
+    if (!lastDraw) return;
+    try {
+      await OBR.broadcast.sendMessage(`${EXTENSION_ID}/playerRedraw`, {
+        playerId: lastDraw.playerId,
+      });
+    } catch (e) {
+      console.warn("[DeckOfFates] Redraw request failed:", e);
+    }
+  };
+
   if (settings.visibility === "dm-only") {
     return (
       <div className="player-view">
@@ -62,6 +70,10 @@ export function PlayerView({ settings }) {
       </div>
     );
   }
+
+  const redrawsUsed = lastDraw?.redrawsUsed || 0;
+  const proficiency = lastDraw?.proficiency || 0;
+  const redrawsLeft = Math.max(0, proficiency - redrawsUsed);
 
   return (
     <div className="player-view">
@@ -78,6 +90,18 @@ export function PlayerView({ settings }) {
               {lastDraw.playerName}'s draw:
             </div>
             <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
+            {proficiency > 0 && (
+              <div className="draw-actions" style={{ marginTop: 12 }}>
+                <button
+                  className="btn-redraw"
+                  onClick={requestRedraw}
+                  disabled={redrawsLeft <= 0}
+                >
+                  ↻ Redraw
+                  <span className="remaining-badge">{redrawsLeft}/{proficiency}</span>
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

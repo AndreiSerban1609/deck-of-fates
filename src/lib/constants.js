@@ -6,6 +6,7 @@ export const META = {
   PLAYER_CONFIGS: `${EXTENSION_ID}/playerConfigs`,
   SETTINGS: `${EXTENSION_ID}/settings`,
   CURRENT_DRAW: `${EXTENSION_ID}/currentDraw`,
+  CURRENT_DECK: `${EXTENSION_ID}/currentDeck`,
 };
 
 export const CARD_TYPES = {

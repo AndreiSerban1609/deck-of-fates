@@ -37,7 +37,14 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
 
   // --- Player Class Cards ---
 
-  const getPlayerConfig = (id) => configs[id] || { classCards: [] };
+  const getPlayerConfig = (id) => configs[id] || { classCards: [], proficiency: 0 };
+
+  const updateProficiency = (playerId, value) => {
+    const cfg = getPlayerConfig(playerId);
+    const updated = { ...configs, [playerId]: { ...cfg, proficiency: Math.max(0, value) } };
+    setConfigs(updated);
+    onSavePlayerConfigs(updated);
+  };
 
   const addClassCard = (playerId) => {
     const cfg = getPlayerConfig(playerId);
@@ -230,6 +237,15 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                   <div className="player-dot" style={{ background: member.color }} />
                   <span className="player-name">{member.name}</span>
                   <button className="btn-small" onClick={() => addClassCard(member.id)}>+ Card</button>
+                </div>
+
+                <div className="field-row" style={{ marginTop: 4, marginBottom: 4 }}>
+                  <label style={{ fontSize: 11 }}>Proficiency (redraws)</label>
+                  <div className="stepper">
+                    <button onClick={() => updateProficiency(member.id, (cfg.proficiency || 0) - 1)}>−</button>
+                    <span>{cfg.proficiency || 0}</span>
+                    <button onClick={() => updateProficiency(member.id, (cfg.proficiency || 0) + 1)}>+</button>
+                  </div>
                 </div>
 
                 {/* Export / Import / Clear row */}
