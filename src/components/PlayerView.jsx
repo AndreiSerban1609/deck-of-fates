@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { EXTENSION_ID, META } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
@@ -6,6 +6,8 @@ import { CardFace, CardBack } from "./CardArt.jsx";
 export function PlayerView({ settings }) {
   const [lastDraw, setLastDraw] = useState(null);
   const [drawKey, setDrawKey] = useState(0);
+  const [redrawing, setRedrawing] = useState(false);
+  const redrawTimer = useRef(null);
 
   useEffect(() => {
     if (!OBR.isAvailable) return;
@@ -24,6 +26,8 @@ export function PlayerView({ settings }) {
       unsubMeta = OBR.room.onMetadataChange((meta) => {
         const current = meta[META.CURRENT_DRAW];
         if (current) {
+          setRedrawing(false);
+          clearTimeout(redrawTimer.current);
           setDrawKey((k) => k + 1);
           setLastDraw(current);
         } else {
@@ -35,6 +39,8 @@ export function PlayerView({ settings }) {
     const unsubDraw = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardDrawn`,
       (event) => {
+        setRedrawing(false);
+        clearTimeout(redrawTimer.current);
         setDrawKey((k) => k + 1);
         setLastDraw(event.data);
       }
@@ -43,6 +49,8 @@ export function PlayerView({ settings }) {
     const unsubResolve = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardResolved`,
       () => {
+        setRedrawing(false);
+        clearTimeout(redrawTimer.current);
         setLastDraw(null);
       }
     );
@@ -51,16 +59,21 @@ export function PlayerView({ settings }) {
       unsubDraw();
       unsubResolve();
       unsubMeta?.();
+      clearTimeout(redrawTimer.current);
     };
   }, []);
 
   const requestRedraw = async () => {
     if (!lastDraw) return;
+    setRedrawing(true);
+    redrawTimer.current = setTimeout(() => setRedrawing(false), 3000);
     try {
       await OBR.broadcast.sendMessage(`${EXTENSION_ID}/playerRedraw`, {
         playerId: lastDraw.playerId,
       });
     } catch (e) {
+      setRedrawing(false);
+      clearTimeout(redrawTimer.current);
       console.warn("[DeckOfFates] Redraw request failed:", e);
     }
   };
@@ -95,13 +108,15 @@ export function PlayerView({ settings }) {
             <div className="player-draw-label">
               {lastDraw.playerName}'s draw:
             </div>
-            <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
+            <div className={redrawing ? "card-redraw-out" : ""}>
+              <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
+            </div>
             {proficiency > 0 && (
               <div className="draw-actions" style={{ marginTop: 12 }}>
                 <button
                   className="btn-redraw"
                   onClick={requestRedraw}
-                  disabled={redrawsLeft <= 0}
+                  disabled={redrawsLeft <= 0 || redrawing}
                 >
                   ↻ Redraw
                   <span className="remaining-badge">{redrawsLeft}/{proficiency}</span>
