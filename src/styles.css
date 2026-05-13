@@ -530,6 +530,9 @@ body {
   justify-content: space-between;
   margin-top: 8px;
 }
+.editor-panel > .subsection-header {
+  padding: 0 16px;
+}
 .subsection-header span {
   font-family: var(--font-display);
   font-size: 12px;
@@ -735,7 +738,7 @@ body {
 .player-actions-row {
   display: flex;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 16px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
 }
