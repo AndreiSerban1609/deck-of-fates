@@ -10,6 +10,8 @@ export function PlayerView({ settings }) {
   useEffect(() => {
     if (!OBR.isAvailable) return;
 
+    let unsubMeta = null;
+
     const unsubReady = OBR.onReady(async () => {
       try {
         const meta = await OBR.room.getMetadata();
@@ -18,6 +20,16 @@ export function PlayerView({ settings }) {
       } catch (e) {
         console.warn("[DeckOfFates] Failed to read current draw:", e);
       }
+
+      unsubMeta = OBR.room.onMetadataChange((meta) => {
+        const current = meta[META.CURRENT_DRAW];
+        if (current) {
+          setDrawKey((k) => k + 1);
+          setLastDraw(current);
+        } else {
+          setLastDraw(null);
+        }
+      });
     });
 
     const unsubDraw = OBR.broadcast.onMessage(
@@ -35,21 +47,11 @@ export function PlayerView({ settings }) {
       }
     );
 
-    const unsubMeta = OBR.room.onMetadataChange((meta) => {
-      const current = meta[META.CURRENT_DRAW];
-      if (current) {
-        setDrawKey((k) => k + 1);
-        setLastDraw(current);
-      } else {
-        setLastDraw(null);
-      }
-    });
-
     return () => {
       unsubReady();
       unsubDraw();
       unsubResolve();
-      unsubMeta();
+      unsubMeta?.();
     };
   }, []);
 
