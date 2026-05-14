@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { EXTENSION_ID, META, ABILITY_LABELS, SKILL_TO_ABILITY } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
+import { DiceRoll } from "./DiceRoll.jsx";
 import { ResultBreakdown } from "./ResultBreakdown.jsx";
 
 function RedrawBonuses({ bonuses }) {
@@ -30,7 +31,39 @@ export function PlayerView({ settings, playerId }) {
   const [lastDraw, setLastDraw] = useState(null);
   const [drawKey, setDrawKey] = useState(0);
   const [redrawing, setRedrawing] = useState(false);
+  const [dicePhase, setDicePhase] = useState(null); // null | "rolling" | "done"
   const redrawTimer = useRef(null);
+  const pendingDrawRef = useRef(null);
+
+  const applyDraw = useCallback((data) => {
+    setRedrawing(false);
+    clearTimeout(redrawTimer.current);
+    setDrawKey((k) => k + 1);
+
+    if (data.d10Result != null) {
+      pendingDrawRef.current = data;
+      setDicePhase("rolling");
+    } else {
+      setDicePhase(null);
+      setLastDraw(data);
+    }
+  }, []);
+
+  const onPlayerRollComplete = useCallback(() => {
+    setDicePhase("done");
+    if (pendingDrawRef.current) {
+      setLastDraw(pendingDrawRef.current);
+      pendingDrawRef.current = null;
+    }
+  }, []);
+
+  const clearDraw = useCallback(() => {
+    setRedrawing(false);
+    clearTimeout(redrawTimer.current);
+    setLastDraw(null);
+    setDicePhase(null);
+    pendingDrawRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!OBR.isAvailable) return;
@@ -49,33 +82,21 @@ export function PlayerView({ settings, playerId }) {
       unsubMeta = OBR.room.onMetadataChange((meta) => {
         const current = meta[META.CURRENT_DRAW];
         if (current) {
-          setRedrawing(false);
-          clearTimeout(redrawTimer.current);
-          setDrawKey((k) => k + 1);
-          setLastDraw(current);
+          applyDraw(current);
         } else {
-          setLastDraw(null);
+          clearDraw();
         }
       });
     });
 
     const unsubDraw = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardDrawn`,
-      (event) => {
-        setRedrawing(false);
-        clearTimeout(redrawTimer.current);
-        setDrawKey((k) => k + 1);
-        setLastDraw(event.data);
-      }
+      (event) => applyDraw(event.data)
     );
 
     const unsubResolve = OBR.broadcast.onMessage(
       `${EXTENSION_ID}/cardResolved`,
-      () => {
-        setRedrawing(false);
-        clearTimeout(redrawTimer.current);
-        setLastDraw(null);
-      }
+      () => clearDraw()
     );
 
     return () => {
@@ -84,7 +105,7 @@ export function PlayerView({ settings, playerId }) {
       unsubMeta?.();
       clearTimeout(redrawTimer.current);
     };
-  }, []);
+  }, [applyDraw, clearDraw]);
 
   const requestRedraw = async () => {
     if (!lastDraw) return;
@@ -118,21 +139,45 @@ export function PlayerView({ settings, playerId }) {
   const redrawsLeft = Math.max(0, proficiency - redrawsUsed);
   const skipReason = lastDraw?.skipReason || null;
   const redrawBonuses = lastDraw?.redrawBonuses || [];
+  const d10Result = lastDraw?.d10Result ?? pendingDrawRef.current?.d10Result ?? null;
 
   return (
     <div className="player-view">
       <div className="player-view-center">
-        {!lastDraw && (
+        {!lastDraw && !dicePhase && (
           <>
             <CardBack size={140} />
             <p className="player-waiting-text">Awaiting the next draw...</p>
           </>
         )}
-        {lastDraw && (
+
+        {dicePhase === "rolling" && d10Result != null && (
+          <>
+            <div className="player-draw-label">
+              {pendingDrawRef.current?.playerName}'s roll:
+            </div>
+            <div className="dice-and-card-area">
+              <DiceRoll
+                key={drawKey}
+                result={d10Result}
+                rolling={true}
+                size={120}
+                onRollComplete={onPlayerRollComplete}
+              />
+            </div>
+          </>
+        )}
+
+        {lastDraw && dicePhase !== "rolling" && (
           <>
             <div className="player-draw-label">
               {lastDraw.playerName}'s draw:
             </div>
+            {dicePhase === "done" && d10Result != null && (
+              <div style={{ marginBottom: 8 }}>
+                <DiceRoll result={d10Result} rolling={false} size={80} />
+              </div>
+            )}
             <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}${skipReason ? " card-skipping" : ""}`}>
               <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
               {skipReason === "wrong-check" && (
@@ -165,10 +210,10 @@ export function PlayerView({ settings, playerId }) {
             {!skipReason && redrawBonuses.length > 0 && (
               <RedrawBonuses bonuses={redrawBonuses} />
             )}
-            {lastDraw.d10Result != null && !skipReason && (
+            {d10Result != null && !skipReason && (
               <ResultBreakdown
                 key={`rb-${drawKey}`}
-                roll={lastDraw.d10Result}
+                roll={d10Result}
                 card={lastDraw.card}
                 isRedraw={redrawsUsed > 0}
                 statModifier={lastDraw.statModifier}
