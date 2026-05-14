@@ -249,6 +249,7 @@ body {
   gap: 12px;
   overflow: visible;
   padding: 24px;
+  position: relative;
 }
 
 /* Card flip animation */
@@ -880,4 +881,149 @@ body {
 .btn-tiny-danger:hover {
   border-color: var(--accent-red);
   color: var(--accent-red);
+}
+
+/* ---- Check Selection Grid ---- */
+.check-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+.check-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.check-group-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding-left: 2px;
+}
+
+.check-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.check-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.check-btn:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: var(--bg-tertiary);
+}
+
+.check-btn-general {
+  width: 100%;
+  justify-content: center;
+  padding: 10px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.check-btn-general:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* ---- Draw Check Badge ---- */
+.draw-check-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(224, 160, 64, 0.1);
+  border: 1px solid rgba(224, 160, 64, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+}
+
+/* ---- Card Skip Overlay ---- */
+.card-skipping {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.skip-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(14, 14, 20, 0.85);
+  border: 1px solid var(--accent-red);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  z-index: 10;
+}
+
+.skip-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--accent-red);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---- Stat Modifier Display ---- */
+.stat-modifier-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: rgba(42, 156, 212, 0.1);
+  border: 1px solid rgba(42, 156, 212, 0.3);
+  border-radius: var(--radius-sm);
+  animation: resultSlideIn 0.35s ease-out;
+}
+
+@keyframes resultSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-mod-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--accent-blue);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.stat-mod-value {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(42, 156, 212, 0.5);
 }

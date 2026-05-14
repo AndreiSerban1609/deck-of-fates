@@ -53,6 +53,40 @@ export const SKILL_CHECKS = [
   "Seduction", "Performance", "Persuasion", "Deception", "Intimidation",
 ];
 
+export const ABILITY_SCORES = ["str", "dex", "con", "int", "wis", "cha", "will"];
+
+export const ABILITY_LABELS = {
+  str: "Strength",
+  dex: "Dexterity",
+  con: "Constitution",
+  int: "Intelligence",
+  wis: "Wisdom",
+  cha: "Charisma",
+  will: "Will",
+};
+
+export const SKILL_TO_ABILITY = {
+  Lifting: "str",
+  Athletics: "str",
+  Thievery: "dex",
+  Reflex: "dex",
+  Stealth: "dex",
+  Knowledge: "int",
+  Arcana: "int",
+  Investigation: "int",
+  Medicine: "wis",
+  Perception: "wis",
+  Survival: "wis",
+  "Animal Handling": "wis",
+  Insight: "wis",
+  Seduction: "cha",
+  Performance: "cha",
+  Persuasion: "cha",
+  Deception: "cha",
+  Intimidation: "cha",
+  Religion: "will",
+};
+
 export const DEFAULT_SETTINGS = {
   visibility: "dm-only", // "dm-only" | "table"
 };

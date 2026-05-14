@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { CLASS_LIST } from "../lib/classThemes.js";
-import { SKILL_CHECKS } from "../lib/constants.js";
+import { SKILL_CHECKS, ABILITY_SCORES, ABILITY_LABELS } from "../lib/constants.js";
+import { getAbilityModifier } from "../lib/deck.js";
 
 export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTemplate, onSavePlayerConfigs, onBack }) {
   const [tab, setTab] = useState("base");
@@ -136,6 +137,15 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
   const updateProficiency = (playerId, value) => {
     const cfg = getPlayerConfig(playerId);
     const updated = { ...configs, [playerId]: { ...cfg, proficiency: Math.max(0, value) } };
+    setConfigs(updated);
+    onSavePlayerConfigs(updated);
+  };
+
+  const updateStat = (playerId, stat, value) => {
+    const cfg = getPlayerConfig(playerId);
+    const stats = { ...(cfg.stats || {}) };
+    stats[stat] = Math.max(1, Math.min(30, value));
+    const updated = { ...configs, [playerId]: { ...cfg, stats } };
     setConfigs(updated);
     onSavePlayerConfigs(updated);
   };
@@ -347,6 +357,28 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                     <span>{cfg.proficiency || 0}</span>
                     <button onClick={() => updateProficiency(member.id, (cfg.proficiency || 0) + 1)}>+</button>
                   </div>
+                </div>
+
+                {/* Ability Scores */}
+                <div style={{ marginBottom: 6, padding: "4px 0", borderBottom: "1px solid #2a2a3a" }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: "#5e5c54", letterSpacing: 1, textTransform: "uppercase" }}>Ability Scores</span>
+                  </div>
+                  {ABILITY_SCORES.map((stat) => {
+                    const score = cfg.stats?.[stat] || 10;
+                    const mod = getAbilityModifier(score);
+                    const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+                    return (
+                      <div key={stat} className="field-row" style={{ marginBottom: 2 }}>
+                        <label style={{ fontSize: 11 }}>{ABILITY_LABELS[stat]}</label>
+                        <div className="stepper">
+                          <button onClick={() => updateStat(member.id, stat, score - 1)}>−</button>
+                          <span style={{ fontSize: 11 }}>{score} <span style={{ color: "#9a9688", fontSize: 10 }}>({modStr})</span></span>
+                          <button onClick={() => updateStat(member.id, stat, score + 1)}>+</button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Deck exclusions */}

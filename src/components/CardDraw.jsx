@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import OBR from "@owlbear-rodeo/sdk";
-import { buildDeck, shuffle, drawCard, getEffectiveDeckSize } from "../lib/deck.js";
-import { EXTENSION_ID, META, CARD_TYPES } from "../lib/constants.js";
-import { CardFace, CardBack } from "./CardArt.jsx";
+import { buildDeck, shuffle, drawCard, getEffectiveDeckSize, getStatModifierForCheck } from "../lib/deck.js";
+import { EXTENSION_ID, META, CARD_TYPES, SKILL_CHECKS, SKILL_TO_ABILITY, ABILITY_LABELS } from "../lib/constants.js";
+import { CardFace, CardBack, SkillIcon } from "./CardArt.jsx";
 
 const TYPE_LABELS = {
   [CARD_TYPES.STEEL_CRITICAL]: "Crit",
@@ -66,14 +66,18 @@ export function CardDraw({
   isGM,
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedCheck, setSelectedCheck] = useState(null);
   const [currentDeck, setCurrentDeck] = useState(null);
   const [fullDeck, setFullDeck] = useState(null);
   const [drawnCard, setDrawnCard] = useState(null);
-  const [phase, setPhase] = useState("select"); // "select" | "ready" | "drawn"
+  const [phase, setPhase] = useState("select"); // "select" | "check" | "ready" | "drawn"
   const [redrawing, setRedrawing] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const [drawCount, setDrawCount] = useState(0);
   const [redrawsUsed, setRedrawsUsed] = useState(0);
   const [showDeckInfo, setShowDeckInfo] = useState(false);
+  const [statModifier, setStatModifier] = useState(null);
+  const skipTimerRef = useRef(null);
 
   const proficiency = selectedPlayer
     ? (playerConfigs[selectedPlayer.id]?.proficiency || 0)
@@ -83,15 +87,23 @@ export function CardDraw({
 
   const selectPlayer = (member) => {
     setSelectedPlayer(member);
-    setPhase("ready");
+    setPhase("check");
+    setSelectedCheck(null);
     setDrawnCard(null);
     setCurrentDeck(null);
     setFullDeck(null);
     setRedrawsUsed(0);
+    setStatModifier(null);
+    setSkipping(false);
   };
 
-  const doDraw = useCallback((isRedraw = false) => {
-    let deck = currentDeck;
+  const selectCheck = (check) => {
+    setSelectedCheck(check);
+    setPhase("ready");
+  };
+
+  const doDraw = useCallback((isRedraw = false, deckOverride = null) => {
+    let deck = deckOverride || currentDeck;
 
     if (!deck) {
       const cfg = playerConfigs[selectedPlayer.id] || {};
@@ -101,22 +113,55 @@ export function CardDraw({
     }
 
     const { drawnCard: card, remaining } = drawCard(deck);
-    const newRedrawsUsed = isRedraw ? redrawsUsed + 1 : 0;
+    if (!card) return;
+
+    const newRedrawsUsed = isRedraw ? redrawsUsed + 1 : redrawsUsed;
+
+    // Check if this class card should be auto-skipped
+    if (
+      selectedCheck &&
+      card.type === CARD_TYPES.CLASS &&
+      card.checkType &&
+      card.checkType !== selectedCheck &&
+      remaining.length > 0
+    ) {
+      setDrawCount((c) => c + 1);
+      setDrawnCard(card);
+      setCurrentDeck(remaining);
+      setPhase("drawn");
+      setSkipping(true);
+      setStatModifier(null);
+      skipTimerRef.current = setTimeout(() => {
+        setSkipping(false);
+        doDraw(false, remaining);
+      }, 600);
+      return;
+    }
+
+    // Compute stat modifier if Stat card + check selected
+    let computedStatMod = null;
+    if (card.type === CARD_TYPES.STAT && selectedCheck) {
+      const cfg = playerConfigs[selectedPlayer.id] || {};
+      computedStatMod = getStatModifierForCheck(selectedCheck, cfg.stats);
+    }
 
     setDrawCount((c) => c + 1);
     setDrawnCard(card);
     setCurrentDeck(remaining);
     setPhase("drawn");
-    setRedrawsUsed(newRedrawsUsed);
+    setRedrawsUsed(isRedraw ? redrawsUsed + 1 : 0);
+    setSkipping(false);
+    setStatModifier(computedStatMod);
 
-    // Persist + broadcast to table if visibility is "table"
     if (settings.visibility === "table" && card) {
       const drawData = {
         playerId: selectedPlayer.id,
         playerName: selectedPlayer.name,
         card,
-        redrawsUsed: newRedrawsUsed,
+        redrawsUsed: isRedraw ? redrawsUsed + 1 : 0,
         proficiency,
+        selectedCheck,
+        statModifier: computedStatMod,
       };
       try {
         OBR.room.setMetadata({
@@ -128,7 +173,7 @@ export function CardDraw({
         console.warn("[DeckOfFates] Broadcast failed:", e);
       }
     }
-  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency]);
+  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency, selectedCheck]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -144,6 +189,9 @@ export function CardDraw({
     setFullDeck(null);
     setPhase("ready");
     setRedrawsUsed(0);
+    setStatModifier(null);
+    setSkipping(false);
+    clearTimeout(skipTimerRef.current);
 
     if (settings.visibility === "table") {
       try {
@@ -162,11 +210,27 @@ export function CardDraw({
 
   const backToSelect = () => {
     setSelectedPlayer(null);
+    setSelectedCheck(null);
     setDrawnCard(null);
     setCurrentDeck(null);
     setFullDeck(null);
     setPhase("select");
     setRedrawsUsed(0);
+    setStatModifier(null);
+    setSkipping(false);
+    clearTimeout(skipTimerRef.current);
+  };
+
+  const backToCheck = () => {
+    setSelectedCheck(null);
+    setDrawnCard(null);
+    setCurrentDeck(null);
+    setFullDeck(null);
+    setPhase("check");
+    setRedrawsUsed(0);
+    setStatModifier(null);
+    setSkipping(false);
+    clearTimeout(skipTimerRef.current);
   };
 
   // Listen for player-triggered redraws
@@ -213,6 +277,56 @@ export function CardDraw({
     );
   }
 
+  // --- Check Selection ---
+  if (phase === "check") {
+    const grouped = {};
+    for (const skill of SKILL_CHECKS) {
+      const ability = SKILL_TO_ABILITY[skill];
+      if (!grouped[ability]) grouped[ability] = [];
+      grouped[ability].push(skill);
+    }
+    const abilityOrder = ["str", "dex", "con", "int", "wis", "cha", "will"];
+
+    return (
+      <div className="draw-panel">
+        <div className="draw-header">
+          <button className="btn-ghost" onClick={backToSelect}>← Players</button>
+          <div className="draw-player-name">
+            <div className="player-dot" style={{ background: selectedPlayer?.color }} />
+            {selectedPlayer?.name}
+          </div>
+          <div style={{ width: 32 }} />
+        </div>
+        <h3 className="section-title">Select Check</h3>
+        <button
+          className="check-btn check-btn-general"
+          onClick={() => selectCheck(null)}
+        >
+          General Draw
+        </button>
+        <div className="check-grid-container">
+          {abilityOrder.filter((a) => grouped[a]).map((ability) => (
+            <div key={ability} className="check-group">
+              <div className="check-group-label">{ABILITY_LABELS[ability]}</div>
+              <div className="check-grid">
+                {grouped[ability].map((skill) => (
+                  <button
+                    key={skill}
+                    className="check-btn"
+                    onClick={() => selectCheck(skill)}
+                  >
+                    <SkillIcon skill={skill} color="#e0a040" size={14} />
+                    <span>{skill}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // --- Ready / Drawn ---
   const canGMRedraw = cardsRemaining > 0;
   const canPlayerRedraw = redrawsLeft > 0 && cardsRemaining > 0;
@@ -221,10 +335,16 @@ export function CardDraw({
     <div className="draw-panel">
       {/* Player header */}
       <div className="draw-header">
-        <button className="btn-ghost" onClick={backToSelect}>← Players</button>
+        <button className="btn-ghost" onClick={backToCheck}>← Check</button>
         <div className="draw-player-name">
           <div className="player-dot" style={{ background: selectedPlayer?.color }} />
           {selectedPlayer?.name}
+          {selectedCheck && (
+            <span className="draw-check-badge">
+              <SkillIcon skill={selectedCheck} color="#e0a040" size={12} />
+              {selectedCheck}
+            </span>
+          )}
         </div>
         <button
           className={`btn-icon btn-deck-info${showDeckInfo ? " active" : ""}`}
@@ -260,14 +380,27 @@ export function CardDraw({
         )}
 
         {phase === "drawn" && drawnCard && (
-          <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}`}>
+          <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}${skipping ? " card-skipping" : ""}`}>
             <CardFace key={drawCount} card={drawnCard} size={200} animating={true} />
+            {skipping && (
+              <div className="skip-overlay">
+                <span className="skip-label">Wrong check — skipping</span>
+              </div>
+            )}
+            {statModifier != null && !skipping && (
+              <div className="stat-modifier-display">
+                <span className="stat-mod-label">{ABILITY_LABELS[SKILL_TO_ABILITY[selectedCheck]]}</span>
+                <span className="stat-mod-value">
+                  {statModifier >= 0 ? `+${statModifier}` : statModifier}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Actions */}
-      {phase === "drawn" && (
+      {phase === "drawn" && !skipping && (
         <div className="draw-actions">
           <button className="btn-redraw" onClick={doRedraw} disabled={!canGMRedraw}>
             ↻ Redraw
