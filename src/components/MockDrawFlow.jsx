@@ -57,7 +57,7 @@ function RedrawBonuses({ bonuses }) {
   );
 }
 
-export function MockDrawFlow() {
+export function MockDrawFlow({ onBroadcast, playerRedrawRef }) {
   const [diceEnabled, setDiceEnabled] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedCheck, setSelectedCheck] = useState(null);
@@ -107,6 +107,7 @@ export function MockDrawFlow() {
     setD10Result(result);
     setRolling(true);
     setPhase("rolling");
+    if (onBroadcast) onBroadcast({ type: "diceRolled", data: { playerId: selectedPlayer.id, playerName: selectedPlayer.name, d10Result: result } });
   };
 
   const onRollComplete = useCallback(() => {
@@ -145,6 +146,7 @@ export function MockDrawFlow() {
       setSkipReason("wrong-check");
       setStatModifier(null);
       setRedrawBonuses(accBonuses);
+      if (onBroadcast) onBroadcast({ type: "cardDrawn", data: { playerId: selectedPlayer.id, playerName: selectedPlayer.name, card, skipReason: "wrong-check", redrawBonuses: accBonuses } });
 
       skipTimerRef.current = setTimeout(() => {
         setSkipReason(null);
@@ -172,6 +174,7 @@ export function MockDrawFlow() {
       setSkipReason("redraw-effect");
       setStatModifier(null);
       setRedrawBonuses(newBonuses);
+      if (onBroadcast) onBroadcast({ type: "cardDrawn", data: { playerId: selectedPlayer.id, playerName: selectedPlayer.name, card, skipReason: "redraw-effect", redrawBonuses: newBonuses } });
 
       skipTimerRef.current = setTimeout(() => {
         setSkipReason(null);
@@ -196,7 +199,8 @@ export function MockDrawFlow() {
     setSkipReason(null);
     setStatModifier(computedStatMod);
     setRedrawBonuses(accBonuses);
-  }, [currentDeck, playerConfig, redrawsUsed, selectedCheck]);
+    if (onBroadcast) onBroadcast({ type: "cardDrawn", data: { playerId: selectedPlayer.id, playerName: selectedPlayer.name, card, redrawsUsed: finalRedrawsUsed, proficiency, d10Result: diceEnabled ? d10Result : null, selectedCheck, statModifier: computedStatMod, redrawBonuses: accBonuses } });
+  }, [currentDeck, playerConfig, redrawsUsed, selectedCheck, onBroadcast, diceEnabled, d10Result, proficiency]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -205,6 +209,8 @@ export function MockDrawFlow() {
       setRedrawing(false);
     }, 350);
   }, [doDraw]);
+
+  if (playerRedrawRef) playerRedrawRef.current = doRedraw;
 
   const resolve = () => {
     setDrawnCard(null);
@@ -218,6 +224,7 @@ export function MockDrawFlow() {
     setSkipReason(null);
     setRedrawBonuses([]);
     clearTimeout(skipTimerRef.current);
+    if (onBroadcast) onBroadcast({ type: "cardResolved" });
   };
 
   const backToSelect = () => {

@@ -6,6 +6,7 @@ import { PlayerView } from "./components/PlayerView.jsx";
 import { PlayerDeckEditor } from "./components/PlayerDeckEditor.jsx";
 import { CardPreview } from "./components/CardPreview.jsx";
 import { MockDrawFlow } from "./components/MockDrawFlow.jsx";
+import { MockPlayerView } from "./components/MockPlayerView.jsx";
 
 export default function App() {
   const { ready, isGM, playerId, playerName, partyMembers, theme } = useOBR();
@@ -153,6 +154,17 @@ export default function App() {
 
 function StandaloneMode() {
   const [mode, setMode] = useState("draw");
+  const [lastBroadcast, setLastBroadcast] = useState(null);
+  const playerRedrawRef = React.useRef(null);
+
+  const handleBroadcast = React.useCallback((event) => {
+    setLastBroadcast({ ...event, _ts: Date.now() });
+  }, []);
+
+  const handlePlayerRedraw = React.useCallback(() => {
+    if (playerRedrawRef.current) playerRedrawRef.current();
+  }, []);
+
   return (
     <div className="app" data-theme="DARK">
       <div className="app-header">
@@ -164,6 +176,13 @@ function StandaloneMode() {
             title="Mock Draw"
           >
             🎲
+          </button>
+          <button
+            className={`btn-icon ${mode === "split" ? "active" : ""}`}
+            onClick={() => setMode("split")}
+            title="DM + Player Split View"
+          >
+            👥
           </button>
           <button
             className={`btn-icon ${mode === "preview" ? "active" : ""}`}
@@ -178,6 +197,22 @@ function StandaloneMode() {
         Standalone mode · Not connected to Owlbear Rodeo
       </div>
       {mode === "draw" && <MockDrawFlow />}
+      {mode === "split" && (
+        <div className="split-view">
+          <div className="split-pane">
+            <div className="split-pane-label">DM View</div>
+            <MockDrawFlow onBroadcast={handleBroadcast} playerRedrawRef={playerRedrawRef} />
+          </div>
+          <div className="split-pane">
+            <div className="split-pane-label">Player View</div>
+            <MockPlayerView
+              broadcast={lastBroadcast}
+              onRequestRedraw={handlePlayerRedraw}
+              mockPlayerId="p1"
+            />
+          </div>
+        </div>
+      )}
       {mode === "preview" && <CardPreview />}
     </div>
   );
