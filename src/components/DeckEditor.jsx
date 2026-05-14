@@ -8,6 +8,11 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
   const [template, setTemplate] = useState({ ...deckTemplate });
   const [configs, setConfigs] = useState({ ...playerConfigs });
   const fileInputRef = useRef(null);
+  const [expandedPlayers, setExpandedPlayers] = useState({});
+
+  const togglePlayer = (id) => {
+    setExpandedPlayers((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
   const [importTarget, setImportTarget] = useState(null);
 
   // --- Base Template ---
@@ -342,15 +347,24 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
           )}
           {partyMembers.map((member) => {
             const cfg = getPlayerConfig(member.id);
+            const expanded = expandedPlayers[member.id] ?? false;
+            const cardCount = cfg.classCards.length;
             return (
               <div key={member.id} className="player-config-block">
-                <div className="player-config-header">
+                <div className="player-config-header" onClick={() => togglePlayer(member.id)} style={{ cursor: "pointer" }}>
+                  <span className="player-collapse-icon">{expanded ? "▾" : "▸"}</span>
                   <div className="player-dot" style={{ background: member.color }} />
                   <span className="player-name">{member.name}</span>
-                  <button className="btn-small" onClick={() => addClassCard(member.id)}>+ Card</button>
+                  <span style={{ fontSize: 10, color: "#6e6c64", marginLeft: "auto" }}>
+                    {cardCount} card{cardCount !== 1 ? "s" : ""} · Prof {cfg.proficiency || 0}
+                  </span>
                 </div>
 
-                <div className="field-row" style={{ marginTop: 4, marginBottom: 4 }}>
+                {!expanded ? null : <>
+                <div className="field-row" style={{ marginTop: 4, marginBottom: 4, justifyContent: "flex-end" }}>
+                  <button className="btn-small" onClick={() => addClassCard(member.id)}>+ Card</button>
+                </div>
+                <div className="field-row" style={{ marginBottom: 4 }}>
                   <label style={{ fontSize: 11 }}>Proficiency (redraws)</label>
                   <div className="stepper">
                     <button onClick={() => updateProficiency(member.id, (cfg.proficiency || 0) - 1)}>−</button>
@@ -506,6 +520,7 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                     )}
                   </div>
                 ))}
+                </>}
               </div>
             );
           })}

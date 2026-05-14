@@ -783,7 +783,12 @@ body {
   font-size: 13px;
   color: var(--text-primary);
   letter-spacing: 0.5px;
-  flex: 1;
+}
+
+.player-collapse-icon {
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 10px;
 }
 
 .player-config-block .card-edit-block {
