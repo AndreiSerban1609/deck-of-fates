@@ -40,14 +40,15 @@ export function PlayerView({ settings, playerId }) {
     clearTimeout(redrawTimer.current);
     setDrawKey((k) => k + 1);
 
-    if (data.d10Result != null) {
+    const isFirstDraw = data.d10Result != null && (data.redrawsUsed || 0) === 0 && !data.skipReason;
+
+    if (isFirstDraw && dicePhase === null) {
       pendingDrawRef.current = data;
       setDicePhase("rolling");
     } else {
-      setDicePhase(null);
       setLastDraw(data);
     }
-  }, []);
+  }, [dicePhase]);
 
   const onPlayerRollComplete = useCallback(() => {
     setDicePhase("done");
