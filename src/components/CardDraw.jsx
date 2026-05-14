@@ -157,6 +157,18 @@ export function CardDraw({
     setD10Result(result);
     setRolling(true);
     setPhase("rolling");
+
+    if (settings.visibility === "table") {
+      try {
+        OBR.broadcast.sendMessage(`${EXTENSION_ID}/diceRolled`, {
+          playerId: selectedPlayer.id,
+          playerName: selectedPlayer.name,
+          d10Result: result,
+        });
+      } catch (e) {
+        console.warn("[DeckOfFates] Dice broadcast failed:", e);
+      }
+    }
   };
 
   const onRollComplete = useCallback(() => {
