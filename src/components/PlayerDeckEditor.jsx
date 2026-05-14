@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CLASS_LIST } from "../lib/classThemes.js";
 import { SKILL_CHECKS, ABILITY_SCORES, ABILITY_LABELS } from "../lib/constants.js";
 import { getAbilityModifier } from "../lib/deck.js";
@@ -11,6 +11,20 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
     stats: playerConfig?.stats || {},
   });
   const fileInputRef = useRef(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!initializedRef.current && playerConfig?.stats && Object.keys(playerConfig.stats).length > 0) {
+      initializedRef.current = true;
+      setConfig((prev) => ({
+        ...prev,
+        classCards: playerConfig.classCards || prev.classCards,
+        proficiency: playerConfig.proficiency ?? prev.proficiency,
+        excludedCards: playerConfig.excludedCards || prev.excludedCards,
+        stats: playerConfig.stats,
+      }));
+    }
+  }, [playerConfig]);
 
   const exc = config.excludedCards || {};
   const neutralCards = deckTemplate?.neutralCards || [];
