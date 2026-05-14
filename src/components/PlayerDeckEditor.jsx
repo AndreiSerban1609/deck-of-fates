@@ -11,19 +11,19 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
     stats: playerConfig?.stats || {},
   });
   const fileInputRef = useRef(null);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (!initializedRef.current && playerConfig?.stats && Object.keys(playerConfig.stats).length > 0) {
-      initializedRef.current = true;
-      setConfig((prev) => ({
-        ...prev,
-        classCards: playerConfig.classCards || prev.classCards,
-        proficiency: playerConfig.proficiency ?? prev.proficiency,
-        excludedCards: playerConfig.excludedCards || prev.excludedCards,
-        stats: playerConfig.stats,
-      }));
-    }
+    if (!playerConfig) return;
+    setConfig((prev) => {
+      const incoming = {
+        classCards: playerConfig.classCards || [],
+        proficiency: playerConfig.proficiency || 0,
+        excludedCards: playerConfig.excludedCards || {},
+        stats: playerConfig.stats || {},
+      };
+      if (JSON.stringify(prev) === JSON.stringify(incoming)) return prev;
+      return incoming;
+    });
   }, [playerConfig]);
 
   const exc = config.excludedCards || {};

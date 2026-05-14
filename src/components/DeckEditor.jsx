@@ -277,7 +277,7 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
           Base Deck
         </button>
         <button className={`tab-btn ${tab === "players" ? "active" : ""}`} onClick={() => setTab("players")}>
-          Class Cards
+          Player Decks
         </button>
       </div>
 
