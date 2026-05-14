@@ -60,7 +60,7 @@ export default function App() {
             </button>
           </div>
         </div>
-        {playerView === "waiting" && <PlayerView settings={settings} />}
+        {playerView === "waiting" && <PlayerView settings={settings} playerId={playerId} />}
         {playerView === "editor" && (
           <PlayerDeckEditor
             playerId={playerId}

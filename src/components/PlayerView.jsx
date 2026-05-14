@@ -26,7 +26,7 @@ function RedrawBonuses({ bonuses }) {
   );
 }
 
-export function PlayerView({ settings }) {
+export function PlayerView({ settings, playerId }) {
   const [lastDraw, setLastDraw] = useState(null);
   const [drawKey, setDrawKey] = useState(0);
   const [redrawing, setRedrawing] = useState(false);
@@ -133,7 +133,7 @@ export function PlayerView({ settings }) {
             <div className="player-draw-label">
               {lastDraw.playerName}'s draw:
             </div>
-            <div className={`${redrawing ? "card-redraw-out" : ""}${skipReason ? " card-skipping" : ""}`} style={{ position: "relative" }}>
+            <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}${skipReason ? " card-skipping" : ""}`}>
               <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
               {skipReason === "wrong-check" && (
                 <div className="skip-overlay">
@@ -175,7 +175,7 @@ export function PlayerView({ settings }) {
                 redrawBonuses={redrawBonuses}
               />
             )}
-            {proficiency > 0 && !skipReason && (
+            {proficiency > 0 && !skipReason && playerId === lastDraw.playerId && (
               <div className="draw-actions" style={{ marginTop: 12 }}>
                 <button
                   className="btn-redraw"
