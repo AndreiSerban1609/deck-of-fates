@@ -883,6 +883,87 @@ body {
   color: var(--accent-red);
 }
 
+/* ---- Dice Roll ---- */
+.dice-and-card-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@keyframes diceJitter {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-2deg) scale(1.02); }
+  75% { transform: rotate(2deg) scale(0.98); }
+}
+
+@keyframes diceSettle {
+  0% { transform: scale(1.2); opacity: 0.8; }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ---- Result Breakdown ---- */
+.result-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.result-slide-in {
+  animation: resultSlideIn 0.35s ease-out;
+}
+
+@keyframes resultSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rb-segment {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rb-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.rb-value {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--accent-gold);
+  letter-spacing: 0.5px;
+}
+
+.rb-special {
+  font-size: 12px;
+  letter-spacing: 1.5px;
+}
+
+.rb-total {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(224, 160, 64, 0.5);
+}
+
+.rb-divider {
+  color: var(--text-muted);
+  font-size: 12px;
+  opacity: 0.4;
+}
+
 /* ---- Check Selection Grid ---- */
 .check-grid-container {
   display: flex;
@@ -1007,11 +1088,6 @@ body {
   animation: resultSlideIn 0.35s ease-out;
 }
 
-@keyframes resultSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .stat-mod-label {
   font-family: var(--font-display);
   font-size: 10px;
@@ -1026,4 +1102,84 @@ body {
   font-weight: 700;
   color: #fff;
   text-shadow: 0 0 8px rgba(42, 156, 212, 0.5);
+}
+
+/* ---- Redraw Effect Overlay ---- */
+.skip-overlay-effect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-color: var(--accent-gold);
+  background: rgba(14, 14, 20, 0.9);
+  padding: 8px 16px;
+}
+
+.skip-effect-name {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--accent-gold);
+  letter-spacing: 1px;
+}
+
+.skip-effect-desc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+  max-width: 180px;
+}
+
+.skip-effect-mod {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--accent-gold);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* ---- Redraw Bonuses Display ---- */
+.redraw-bonuses {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px;
+  margin-top: 6px;
+  background: rgba(224, 160, 64, 0.08);
+  border: 1px solid rgba(224, 160, 64, 0.2);
+  border-radius: var(--radius-sm);
+  animation: resultSlideIn 0.35s ease-out;
+}
+
+.redraw-bonus-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.redraw-bonus-name {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.redraw-bonus-mod {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+.redraw-bonus-total {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  border-top: 1px solid rgba(224, 160, 64, 0.15);
+  padding-top: 3px;
+  margin-top: 2px;
 }

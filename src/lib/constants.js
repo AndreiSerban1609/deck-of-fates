@@ -89,4 +89,5 @@ export const SKILL_TO_ABILITY = {
 
 export const DEFAULT_SETTINGS = {
   visibility: "dm-only", // "dm-only" | "table"
+  diceRoll: false,
 };

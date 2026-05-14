@@ -1,25 +1,38 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import OBR from "@owlbear-rodeo/sdk";
+import React, { useState, useCallback, useRef } from "react";
 import { buildDeck, shuffle, drawCard, getEffectiveDeckSize, getStatModifierForCheck } from "../lib/deck.js";
-import { EXTENSION_ID, META, CARD_TYPES, SKILL_CHECKS, SKILL_TO_ABILITY, ABILITY_LABELS } from "../lib/constants.js";
+import { DEFAULT_DECK_TEMPLATE, CARD_TYPES, SKILL_CHECKS, SKILL_TO_ABILITY, ABILITY_LABELS } from "../lib/constants.js";
 import { CardFace, CardBack, SkillIcon } from "./CardArt.jsx";
 import { DiceRoll } from "./DiceRoll.jsx";
 import { ResultBreakdown } from "./ResultBreakdown.jsx";
 
 const SKIP_DELAY = 2500;
 
-const TYPE_LABELS = {
-  [CARD_TYPES.STEEL_CRITICAL]: "Crit",
-  [CARD_TYPES.MIGHT_CRITICAL]: "Crit",
-  [CARD_TYPES.NEUTRAL]: "Neutral",
-  [CARD_TYPES.STAT]: "Stat",
-  [CARD_TYPES.ENCOUNTER]: "Encounter",
-  [CARD_TYPES.CLASS]: "Class",
-};
-
-const TYPE_ORDER = [
-  CARD_TYPES.STEEL_CRITICAL, CARD_TYPES.MIGHT_CRITICAL,
-  CARD_TYPES.NEUTRAL, CARD_TYPES.STAT, CARD_TYPES.ENCOUNTER, CARD_TYPES.CLASS,
+const MOCK_PLAYERS = [
+  {
+    id: "p1", name: "Alaric", color: "#e04030",
+    classCards: [
+      { name: "Shadow Step", modifier: 3, description: "Vanish into darkness.", classTheme: "rogue", checkType: "Stealth", redrawModifier: 2, redrawDescription: "Shadow lingers — +2 to next draw" },
+      { name: "Backstab", modifier: 4, description: "Strike from the shadows.", classTheme: "rogue" },
+    ],
+    proficiency: 2,
+    stats: { str: 8, dex: 16, con: 10, int: 12, wis: 10, cha: 14, will: 10 },
+  },
+  {
+    id: "p2", name: "Sera", color: "#60c0f0",
+    classCards: [
+      { name: "Arcane Surge", modifier: 4, description: "Raw magic bends to your will.", classTheme: "wizard", redrawModifier: 1, redrawDescription: "Arcane residue — +1 to next draw" },
+    ],
+    proficiency: 1,
+    stats: { str: 8, dex: 10, con: 10, int: 18, wis: 14, cha: 12, will: 10 },
+  },
+  {
+    id: "p3", name: "Thorne", color: "#3a8b5c",
+    classCards: [
+      { name: "Berserker Rage", modifier: 4, description: "Pain fuels your strength.", classTheme: "warrior", checkType: "Athletics" },
+    ],
+    proficiency: 0,
+    stats: { str: 18, dex: 10, con: 16, int: 8, wis: 10, cha: 8, will: 12 },
+  },
 ];
 
 function RedrawBonuses({ bonuses }) {
@@ -44,53 +57,8 @@ function RedrawBonuses({ bonuses }) {
   );
 }
 
-function DeckInfoPanel({ fullDeck, currentDeck, onClose }) {
-  const remainingIds = currentDeck ? new Set(currentDeck.map((c) => c.id)) : null;
-
-  const sorted = [...fullDeck].sort(
-    (a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type)
-  );
-
-  const totalCount = fullDeck.length;
-  const leftCount = currentDeck ? currentDeck.length : totalCount;
-
-  return (
-    <div className="deck-info-overlay" onClick={onClose}>
-      <div className="deck-info-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="deck-info-header">
-          <span>Deck — {leftCount}/{totalCount} remaining</span>
-          <button className="btn-ghost deck-info-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="deck-info-list">
-          {sorted.map((card) => {
-            const drawn = remainingIds !== null && !remainingIds.has(card.id);
-            return (
-              <div key={card.id} className={`deck-info-card${drawn ? " drawn" : ""}`}>
-                <span className={`deck-info-type deck-info-type--${card.type.toLowerCase()}`}>
-                  {TYPE_LABELS[card.type]}
-                </span>
-                <span className="deck-info-name">{card.name}</span>
-                {card.modifier != null && (
-                  <span className="deck-info-mod">
-                    {card.modifier >= 0 ? "+" : ""}{card.modifier}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function CardDraw({
-  deckTemplate,
-  playerConfigs,
-  partyMembers,
-  settings,
-  isGM,
-}) {
+export function MockDrawFlow() {
+  const [diceEnabled, setDiceEnabled] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedCheck, setSelectedCheck] = useState(null);
   const [currentDeck, setCurrentDeck] = useState(null);
@@ -98,42 +66,24 @@ export function CardDraw({
   const [drawnCard, setDrawnCard] = useState(null);
   const [phase, setPhase] = useState("select");
   const [redrawing, setRedrawing] = useState(false);
-  const [skipReason, setSkipReason] = useState(null); // null | "wrong-check" | "redraw-effect"
+  const [skipReason, setSkipReason] = useState(null);
   const [drawCount, setDrawCount] = useState(0);
   const [redrawsUsed, setRedrawsUsed] = useState(0);
-  const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [d10Result, setD10Result] = useState(null);
   const [rolling, setRolling] = useState(false);
   const [statModifier, setStatModifier] = useState(null);
   const [redrawBonuses, setRedrawBonuses] = useState([]);
   const skipTimerRef = useRef(null);
 
-  const diceEnabled = settings.diceRoll === true;
-
-  const proficiency = selectedPlayer
-    ? (playerConfigs[selectedPlayer.id]?.proficiency || 0)
-    : 0;
+  const playerConfig = selectedPlayer
+    ? MOCK_PLAYERS.find((p) => p.id === selectedPlayer.id)
+    : null;
+  const proficiency = playerConfig?.proficiency || 0;
   const redrawsLeft = Math.max(0, proficiency - redrawsUsed);
   const cardsRemaining = currentDeck ? currentDeck.length : null;
 
-  const broadcast = useCallback((eventType, data) => {
-    if (settings.visibility !== "table") return;
-    try {
-      if (eventType === "drawn") {
-        OBR.room.setMetadata({
-          [META.CURRENT_DRAW]: data,
-          [META.CURRENT_DECK]: data._remaining || null,
-        });
-      }
-      const { _remaining, ...broadcastData } = data;
-      OBR.broadcast.sendMessage(`${EXTENSION_ID}/card${eventType === "drawn" ? "Drawn" : "Resolved"}`, broadcastData);
-    } catch (e) {
-      console.warn("[DeckOfFates] Broadcast failed:", e);
-    }
-  }, [settings.visibility]);
-
-  const selectPlayer = (member) => {
-    setSelectedPlayer(member);
+  const selectPlayer = (player) => {
+    setSelectedPlayer(player);
     setPhase("check");
     setSelectedCheck(null);
     setDrawnCard(null);
@@ -168,8 +118,11 @@ export function CardDraw({
     let deck = deckOverride || currentDeck;
 
     if (!deck) {
-      const cfg = playerConfigs[selectedPlayer.id] || {};
-      const built = buildDeck(deckTemplate, cfg.classCards || [], cfg.excludedCards || null);
+      const built = buildDeck(
+        DEFAULT_DECK_TEMPLATE,
+        playerConfig?.classCards || [],
+        null
+      );
       setFullDeck(built);
       deck = shuffle(built);
     }
@@ -177,7 +130,7 @@ export function CardDraw({
     const { drawnCard: card, remaining } = drawCard(deck);
     if (!card) return;
 
-    // Wrong-check skip (takes priority over redraw effect)
+    // Wrong-check skip
     if (
       selectedCheck &&
       card.type === CARD_TYPES.CLASS &&
@@ -193,15 +146,6 @@ export function CardDraw({
       setStatModifier(null);
       setRedrawBonuses(accBonuses);
 
-      broadcast("drawn", {
-        playerId: selectedPlayer.id,
-        playerName: selectedPlayer.name,
-        card,
-        skipReason: "wrong-check",
-        redrawBonuses: accBonuses,
-        _remaining: remaining,
-      });
-
       skipTimerRef.current = setTimeout(() => {
         setSkipReason(null);
         doDraw(false, remaining, true, accBonuses);
@@ -209,7 +153,7 @@ export function CardDraw({
       return;
     }
 
-    // Redraw effect — class card with redrawModifier triggers auto-redraw
+    // Redraw effect
     if (
       card.type === CARD_TYPES.CLASS &&
       card.redrawModifier != null &&
@@ -229,15 +173,6 @@ export function CardDraw({
       setStatModifier(null);
       setRedrawBonuses(newBonuses);
 
-      broadcast("drawn", {
-        playerId: selectedPlayer.id,
-        playerName: selectedPlayer.name,
-        card,
-        skipReason: "redraw-effect",
-        redrawBonuses: newBonuses,
-        _remaining: remaining,
-      });
-
       skipTimerRef.current = setTimeout(() => {
         setSkipReason(null);
         doDraw(false, remaining, true, newBonuses);
@@ -245,11 +180,10 @@ export function CardDraw({
       return;
     }
 
-    // Normal draw — final card
+    // Normal draw
     let computedStatMod = null;
     if (card.type === CARD_TYPES.STAT && selectedCheck) {
-      const cfg = playerConfigs[selectedPlayer.id] || {};
-      computedStatMod = getStatModifierForCheck(selectedCheck, cfg.stats);
+      computedStatMod = getStatModifierForCheck(selectedCheck, playerConfig?.stats);
     }
 
     const finalRedrawsUsed = isRedraw ? redrawsUsed + 1 : isSkipRedraw ? redrawsUsed : 0;
@@ -262,20 +196,7 @@ export function CardDraw({
     setSkipReason(null);
     setStatModifier(computedStatMod);
     setRedrawBonuses(accBonuses);
-
-    broadcast("drawn", {
-      playerId: selectedPlayer.id,
-      playerName: selectedPlayer.name,
-      card,
-      redrawsUsed: finalRedrawsUsed,
-      proficiency,
-      d10Result: diceEnabled ? d10Result : null,
-      selectedCheck,
-      statModifier: computedStatMod,
-      redrawBonuses: accBonuses,
-      _remaining: remaining,
-    });
-  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency, diceEnabled, d10Result, selectedCheck, broadcast]);
+  }, [currentDeck, playerConfig, redrawsUsed, selectedCheck]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -297,20 +218,6 @@ export function CardDraw({
     setSkipReason(null);
     setRedrawBonuses([]);
     clearTimeout(skipTimerRef.current);
-
-    if (settings.visibility === "table") {
-      try {
-        OBR.room.setMetadata({
-          [META.CURRENT_DRAW]: null,
-          [META.CURRENT_DECK]: null,
-        });
-        OBR.broadcast.sendMessage(`${EXTENSION_ID}/cardResolved`, {
-          playerId: selectedPlayer.id,
-        });
-      } catch (e) {
-        console.warn("[DeckOfFates] Broadcast failed:", e);
-      }
-    }
   };
 
   const backToSelect = () => {
@@ -344,41 +251,23 @@ export function CardDraw({
     clearTimeout(skipTimerRef.current);
   };
 
-  useEffect(() => {
-    if (!OBR.isAvailable) return;
+  const canGMRedraw = cardsRemaining > 0;
 
-    const unsub = OBR.broadcast.onMessage(
-      `${EXTENSION_ID}/playerRedraw`,
-      (event) => {
-        if (phase !== "drawn" || !selectedPlayer) return;
-        if (event.data.playerId !== selectedPlayer.id) return;
-        if (redrawsLeft <= 0 || cardsRemaining <= 0) return;
-        doRedraw();
-      }
-    );
-
-    return () => unsub();
-  }, [phase, selectedPlayer, doRedraw, redrawsLeft, cardsRemaining]);
-
-  // --- Player Select ---
   if (phase === "select") {
     return (
       <div className="draw-panel">
         <h3 className="section-title">Draw for Player</h3>
         <div className="player-list">
-          {partyMembers.length === 0 && (
-            <div className="empty-state">No players in the room yet.</div>
-          )}
-          {partyMembers.map((member) => (
+          {MOCK_PLAYERS.map((player) => (
             <button
-              key={member.id}
+              key={player.id}
               className="player-select-btn"
-              onClick={() => selectPlayer(member)}
+              onClick={() => selectPlayer(player)}
             >
-              <div className="player-dot" style={{ background: member.color }} />
-              <span>{member.name}</span>
+              <div className="player-dot" style={{ background: player.color }} />
+              <span>{player.name}</span>
               <span className="player-cards-badge">
-                {getEffectiveDeckSize(deckTemplate, playerConfigs[member.id] || {})} cards
+                {getEffectiveDeckSize(DEFAULT_DECK_TEMPLATE, { classCards: player.classCards })} cards
               </span>
             </button>
           ))}
@@ -387,7 +276,6 @@ export function CardDraw({
     );
   }
 
-  // --- Check Selection ---
   if (phase === "check") {
     const grouped = {};
     for (const skill of SKILL_CHECKS) {
@@ -437,9 +325,6 @@ export function CardDraw({
     );
   }
 
-  // --- Ready / Rolling / Rolled / Drawn ---
-  const canGMRedraw = cardsRemaining > 0;
-
   return (
     <div className="draw-panel">
       <div className="draw-header">
@@ -454,31 +339,11 @@ export function CardDraw({
             </span>
           )}
         </div>
-        <button
-          className={`btn-icon btn-deck-info${showDeckInfo ? " active" : ""}`}
-          onClick={() => setShowDeckInfo(!showDeckInfo)}
-          title="Deck breakdown"
-        >
-          ⓘ
-        </button>
+        <div style={{ width: 32 }} />
       </div>
 
-      {showDeckInfo && (() => {
-        const deck = fullDeck || (() => {
-          const cfg = playerConfigs[selectedPlayer.id] || {};
-          return buildDeck(deckTemplate, cfg.classCards || [], cfg.excludedCards || null);
-        })();
-        return (
-          <DeckInfoPanel
-            fullDeck={deck}
-            currentDeck={currentDeck}
-            onClose={() => setShowDeckInfo(false)}
-          />
-        );
-      })()}
-
       <div className="card-stage">
-        {phase === "ready" && !drawnCard && !diceEnabled && (
+        {phase === "ready" && !diceEnabled && (
           <div className="card-draw-prompt" onClick={() => doDraw(false)}>
             <CardBack size={180} />
             <div className="draw-hint">Tap to draw</div>
