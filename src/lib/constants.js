@@ -19,7 +19,13 @@ export const CARD_TYPES = {
 };
 
 export const DEFAULT_DECK_TEMPLATE = {
-  neutralCount: 5,
+  neutralCards: [
+    { name: "Neutral", modifier: 0, description: "No twist of fate." },
+    { name: "Neutral", modifier: 0, description: "No twist of fate." },
+    { name: "Neutral", modifier: 0, description: "No twist of fate." },
+    { name: "Neutral", modifier: 0, description: "No twist of fate." },
+    { name: "Neutral", modifier: 0, description: "No twist of fate." },
+  ],
   statCount: 4,
   encounterCards: [
     {

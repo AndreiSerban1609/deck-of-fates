@@ -11,10 +11,11 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
   const fileInputRef = useRef(null);
 
   const exc = config.excludedCards || {};
-  const neutralCount = deckTemplate?.neutralCount || 0;
+  const neutralCards = deckTemplate?.neutralCards || [];
   const statCount = deckTemplate?.statCount || 0;
   const encounterCards = deckTemplate?.encounterCards || [];
-  const effectiveNeutrals = Math.max(0, neutralCount - (exc.neutralExcludeCount || 0));
+  const excludedNeuSet = new Set(exc.neutrals || []);
+  const effectiveNeutrals = neutralCards.filter(function(_, i) { return !excludedNeuSet.has(i); }).length;
   const effectiveStats = Math.max(0, statCount - (exc.statExcludeCount || 0));
   const excludedEncSet = new Set(exc.encounters || []);
   const effectiveEncounters = encounterCards.filter(function(_, i) { return !excludedEncSet.has(i); }).length;
@@ -31,6 +32,13 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
       ...config,
       excludedCards: { ...exc, [key]: value },
     });
+  }
+
+  function toggleNeutralExclusion(idx) {
+    const current = new Set(exc.neutrals || []);
+    if (current.has(idx)) current.delete(idx);
+    else current.add(idx);
+    updateExclusion("neutrals", Array.from(current));
   }
 
   function toggleEncounterExclusion(idx) {
@@ -151,14 +159,33 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
           <span style={{ fontSize: 11, color: "#9a9688" }}>2 (locked)</span>
         </div>
 
-        <div className="field-row">
-          <label>Neutral Cards</label>
-          <div className="stepper">
-            <button onClick={function() { updateExclusion("neutralExcludeCount", Math.min(neutralCount, (exc.neutralExcludeCount || 0) + 1)); }} disabled={effectiveNeutrals <= 0}>−</button>
-            <span>{effectiveNeutrals} / {neutralCount}</span>
-            <button onClick={function() { updateExclusion("neutralExcludeCount", Math.max(0, (exc.neutralExcludeCount || 0) - 1)); }} disabled={(exc.neutralExcludeCount || 0) <= 0}>+</button>
-          </div>
-        </div>
+        {neutralCards.length > 0 && (
+          <React.Fragment>
+            <div className="subsection-header" style={{ marginTop: 8 }}>
+              <span>Neutral Cards</span>
+            </div>
+            {neutralCards.map(function(neu, idx) {
+              var excluded = excludedNeuSet.has(idx);
+              return (
+                <div key={idx} className="field-row" style={{ alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: excluded ? "#5e5c54" : "#d4c9a8", textDecoration: excluded ? "line-through" : "none" }}>
+                      {neu.name} ({neu.modifier >= 0 ? "+" : ""}{neu.modifier})
+                    </div>
+                    <div style={{ fontSize: 10, color: "#6e6c64", fontStyle: "italic" }}>{neu.description}</div>
+                  </div>
+                  <button
+                    className={"btn-tiny" + (excluded ? " btn-tiny-danger" : "")}
+                    onClick={function() { toggleNeutralExclusion(idx); }}
+                    style={{ minWidth: 50 }}
+                  >
+                    {excluded ? "Off" : "On"}
+                  </button>
+                </div>
+              );
+            })}
+          </React.Fragment>
+        )}
 
         <div className="field-row">
           <label>Stat Cards</label>

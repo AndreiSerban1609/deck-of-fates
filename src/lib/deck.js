@@ -30,11 +30,13 @@ export function buildDeck(template, classCards = [], exclusions = null) {
     makeCard(CARD_TYPES.MIGHT_CRITICAL, "Might Critical", null)
   );
 
-  const effectiveNeutrals = Math.max(0,
-    (template.neutralCount || 0) - (exclusions?.neutralExcludeCount || 0)
-  );
-  for (let i = 0; i < effectiveNeutrals; i++) {
-    cards.push(makeCard(CARD_TYPES.NEUTRAL, "Neutral", 0, "No twist of fate."));
+  const neutralCards = template.neutralCards
+    || Array.from({ length: template.neutralCount || 0 }, () => ({ name: "Neutral", modifier: 0, description: "No twist of fate." }));
+  const excludedNeutrals = new Set(exclusions?.neutrals || []);
+  for (let i = 0; i < neutralCards.length; i++) {
+    if (excludedNeutrals.has(i)) continue;
+    const n = neutralCards[i];
+    cards.push(makeCard(CARD_TYPES.NEUTRAL, n.name, n.modifier, n.description));
   }
 
   const effectiveStats = Math.max(0,
@@ -71,7 +73,10 @@ export function buildDeck(template, classCards = [], exclusions = null) {
 
 export function getEffectiveDeckSize(template, config = {}) {
   const exc = config.excludedCards || {};
-  const neutrals = Math.max(0, (template.neutralCount || 0) - (exc.neutralExcludeCount || 0));
+  const neutralCards = template.neutralCards
+    || Array.from({ length: template.neutralCount || 0 }, () => ({ name: "Neutral", modifier: 0, description: "No twist of fate." }));
+  const excludedNeu = new Set(exc.neutrals || []);
+  const neutrals = neutralCards.filter((_, i) => !excludedNeu.has(i)).length;
   const stats = Math.max(0, (template.statCount || 0) - (exc.statExcludeCount || 0));
   const excludedEnc = new Set(exc.encounters || []);
   const encounters = (template.encounterCards || []).filter((_, i) => !excludedEnc.has(i)).length;
@@ -113,6 +118,9 @@ export function getModifierDisplay(card) {
     return "CRITICAL";
   }
   if (card.type === CARD_TYPES.NEUTRAL) {
+    if (card.modifier === 0) return "±0";
+    if (card.modifier > 0) return `+${card.modifier}`;
+    if (card.modifier < 0) return `${card.modifier}`;
     return "";
   }
   if (card.type === CARD_TYPES.STAT) {

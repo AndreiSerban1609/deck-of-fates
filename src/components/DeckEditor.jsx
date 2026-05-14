@@ -17,6 +17,42 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
     onSaveTemplate(updated);
   };
 
+  const addNeutralCard = () => {
+    const neu = [...(template.neutralCards || [])];
+    neu.push({ name: "Neutral", modifier: 0, description: "No twist of fate." });
+    updateTemplate("neutralCards", neu);
+  };
+
+  const updateNeutralCard = (idx, field, value) => {
+    const neu = [...(template.neutralCards || [])];
+    neu[idx] = { ...neu[idx], [field]: field === "modifier" ? Number(value) : value };
+    updateTemplate("neutralCards", neu);
+  };
+
+  const removeNeutralCard = (idx) => {
+    const neu = [...(template.neutralCards || [])];
+    neu.splice(idx, 1);
+    const updatedTemplate = { ...template, neutralCards: neu };
+    setTemplate(updatedTemplate);
+    const updatedConfigs = { ...configs };
+    for (const [pid, cfg] of Object.entries(updatedConfigs)) {
+      const excNeu = cfg.excludedCards?.neutrals;
+      if (!excNeu?.length) continue;
+      updatedConfigs[pid] = {
+        ...cfg,
+        excludedCards: {
+          ...cfg.excludedCards,
+          neutrals: excNeu
+            .filter((i) => i !== idx)
+            .map((i) => (i > idx ? i - 1 : i)),
+        },
+      };
+    }
+    setConfigs(updatedConfigs);
+    onSaveTemplate(updatedTemplate);
+    onSavePlayerConfigs(updatedConfigs);
+  };
+
   const addEncounterCard = () => {
     const enc = [...(template.encounterCards || [])];
     enc.push({ name: "New Encounter", modifier: -1, description: "Describe the encounter..." });
@@ -69,6 +105,14 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
     };
     setConfigs(updated);
     onSavePlayerConfigs(updated);
+  };
+
+  const toggleNeutralExclusion = (playerId, idx) => {
+    const cfg = getPlayerConfig(playerId);
+    const current = new Set(cfg.excludedCards?.neutrals || []);
+    if (current.has(idx)) current.delete(idx);
+    else current.add(idx);
+    updateExclusion(playerId, "neutrals", [...current]);
   };
 
   const toggleEncounterExclusion = (playerId, idx) => {
@@ -200,7 +244,7 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
     onSavePlayerConfigs(updated);
   };
 
-  const totalCards = 2 + (template.neutralCount || 0) + (template.statCount || 0) + (template.encounterCards || []).length;
+  const totalCards = 2 + (template.neutralCards || []).length + (template.statCount || 0) + (template.encounterCards || []).length;
 
   return (
     <div className="editor-panel">
@@ -233,18 +277,25 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
           <div className="deck-summary">
             Base deck: <strong>{totalCards}</strong> cards
             <span className="deck-breakdown">
-              (2 crit + {template.neutralCount} neutral + {template.statCount} stat + {(template.encounterCards || []).length} encounter)
+              (2 crit + {(template.neutralCards || []).length} neutral + {template.statCount} stat + {(template.encounterCards || []).length} encounter)
             </span>
           </div>
 
-          <div className="field-row">
-            <label>Neutral Cards (±0)</label>
-            <div className="stepper">
-              <button onClick={() => updateTemplate("neutralCount", Math.max(0, (template.neutralCount || 0) - 1))}>−</button>
-              <span>{template.neutralCount || 0}</span>
-              <button onClick={() => updateTemplate("neutralCount", (template.neutralCount || 0) + 1)}>+</button>
-            </div>
+          <div className="subsection-header">
+            <span>Neutral Cards</span>
+            <button className="btn-small" onClick={addNeutralCard}>+ Add</button>
           </div>
+
+          {(template.neutralCards || []).map((neu, idx) => (
+            <div key={idx} className="card-edit-block">
+              <div className="card-edit-row">
+                <input type="text" value={neu.name} onChange={(e) => updateNeutralCard(idx, "name", e.target.value)} placeholder="Card name" className="input-name" />
+                <input type="number" value={neu.modifier} onChange={(e) => updateNeutralCard(idx, "modifier", e.target.value)} className="input-modifier" />
+                <button className="btn-remove" onClick={() => removeNeutralCard(idx)}>✕</button>
+              </div>
+              <textarea value={neu.description} onChange={(e) => updateNeutralCard(idx, "description", e.target.value)} placeholder="Neutral description..." className="input-description" rows={2} />
+            </div>
+          ))}
 
           <div className="field-row">
             <label>Stat Cards</label>
@@ -301,9 +352,8 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                 {/* Deck exclusions */}
                 {(() => {
                   const exc = cfg.excludedCards || {};
-                  const effNeutrals = Math.max(0, (template.neutralCount || 0) - (exc.neutralExcludeCount || 0));
                   const effStats = Math.max(0, (template.statCount || 0) - (exc.statExcludeCount || 0));
-                  const hasExclusions = (exc.neutralExcludeCount || 0) > 0 || (exc.statExcludeCount || 0) > 0 || (exc.encounters || []).length > 0;
+                  const hasExclusions = (exc.neutrals || []).length > 0 || (exc.statExcludeCount || 0) > 0 || (exc.encounters || []).length > 0;
                   return (
                     <div style={{ marginBottom: 6, padding: "4px 0", borderBottom: "1px solid #2a2a3a" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -313,14 +363,6 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                         )}
                       </div>
                       <div className="field-row" style={{ marginBottom: 2 }}>
-                        <label style={{ fontSize: 11 }}>Neutrals</label>
-                        <div className="stepper">
-                          <button onClick={() => updateExclusion(member.id, "neutralExcludeCount", Math.min(template.neutralCount || 0, (exc.neutralExcludeCount || 0) + 1))} disabled={effNeutrals <= 0}>−</button>
-                          <span style={{ fontSize: 11 }}>{effNeutrals}/{template.neutralCount || 0}</span>
-                          <button onClick={() => updateExclusion(member.id, "neutralExcludeCount", Math.max(0, (exc.neutralExcludeCount || 0) - 1))} disabled={(exc.neutralExcludeCount || 0) <= 0}>+</button>
-                        </div>
-                      </div>
-                      <div className="field-row" style={{ marginBottom: 2 }}>
                         <label style={{ fontSize: 11 }}>Stats</label>
                         <div className="stepper">
                           <button onClick={() => updateExclusion(member.id, "statExcludeCount", Math.min(template.statCount || 0, (exc.statExcludeCount || 0) + 1))} disabled={effStats <= 0}>−</button>
@@ -328,6 +370,19 @@ export function DeckEditor({ deckTemplate, playerConfigs, partyMembers, onSaveTe
                           <button onClick={() => updateExclusion(member.id, "statExcludeCount", Math.max(0, (exc.statExcludeCount || 0) - 1))} disabled={(exc.statExcludeCount || 0) <= 0}>+</button>
                         </div>
                       </div>
+                      {(template.neutralCards || []).map((neu, idx) => {
+                        const excluded = (exc.neutrals || []).includes(idx);
+                        return (
+                          <div key={idx} className="field-row" style={{ marginBottom: 1 }}>
+                            <label style={{ fontSize: 11, color: excluded ? "#5e5c54" : "#d4c9a8", textDecoration: excluded ? "line-through" : "none" }}>
+                              {neu.name} ({neu.modifier >= 0 ? "+" : ""}{neu.modifier})
+                            </label>
+                            <button className={`btn-tiny ${excluded ? "btn-tiny-danger" : ""}`} onClick={() => toggleNeutralExclusion(member.id, idx)} style={{ minWidth: 36 }}>
+                              {excluded ? "Off" : "On"}
+                            </button>
+                          </div>
+                        );
+                      })}
                       {(template.encounterCards || []).map((enc, idx) => {
                         const excluded = (exc.encounters || []).includes(idx);
                         return (
