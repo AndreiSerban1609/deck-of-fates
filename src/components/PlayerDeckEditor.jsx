@@ -8,6 +8,7 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
     classCards: playerConfig?.classCards || [],
     proficiency: playerConfig?.proficiency || 0,
     excludedCards: playerConfig?.excludedCards || {},
+    stats: playerConfig?.stats || {},
   });
   const fileInputRef = useRef(null);
 
