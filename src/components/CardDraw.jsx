@@ -6,6 +6,8 @@ import { CardFace, CardBack, SkillIcon } from "./CardArt.jsx";
 import { DiceRoll } from "./DiceRoll.jsx";
 import { ResultBreakdown } from "./ResultBreakdown.jsx";
 
+const SKIP_DELAY = 2500;
+
 const TYPE_LABELS = {
   [CARD_TYPES.STEEL_CRITICAL]: "Crit",
   [CARD_TYPES.MIGHT_CRITICAL]: "Crit",
@@ -19,6 +21,28 @@ const TYPE_ORDER = [
   CARD_TYPES.STEEL_CRITICAL, CARD_TYPES.MIGHT_CRITICAL,
   CARD_TYPES.NEUTRAL, CARD_TYPES.STAT, CARD_TYPES.ENCOUNTER, CARD_TYPES.CLASS,
 ];
+
+function RedrawBonuses({ bonuses }) {
+  if (!bonuses || bonuses.length === 0) return null;
+  const total = bonuses.reduce((sum, b) => sum + b.modifier, 0);
+  return (
+    <div className="redraw-bonuses">
+      {bonuses.map((b, i) => (
+        <div key={i} className="redraw-bonus-row">
+          <span className="redraw-bonus-name">{b.name}</span>
+          <span className="redraw-bonus-mod">
+            {b.modifier >= 0 ? `+${b.modifier}` : b.modifier}
+          </span>
+        </div>
+      ))}
+      {bonuses.length > 1 && (
+        <div className="redraw-bonus-total">
+          Total bonus: {total >= 0 ? `+${total}` : total}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function DeckInfoPanel({ fullDeck, currentDeck, onClose }) {
   const remainingIds = currentDeck ? new Set(currentDeck.map((c) => c.id)) : null;
@@ -72,15 +96,16 @@ export function CardDraw({
   const [currentDeck, setCurrentDeck] = useState(null);
   const [fullDeck, setFullDeck] = useState(null);
   const [drawnCard, setDrawnCard] = useState(null);
-  const [phase, setPhase] = useState("select"); // "select" | "check" | "ready" | "rolling" | "rolled" | "drawn"
+  const [phase, setPhase] = useState("select");
   const [redrawing, setRedrawing] = useState(false);
-  const [skipping, setSkipping] = useState(false);
+  const [skipReason, setSkipReason] = useState(null); // null | "wrong-check" | "redraw-effect"
   const [drawCount, setDrawCount] = useState(0);
   const [redrawsUsed, setRedrawsUsed] = useState(0);
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [d10Result, setD10Result] = useState(null);
   const [rolling, setRolling] = useState(false);
   const [statModifier, setStatModifier] = useState(null);
+  const [redrawBonuses, setRedrawBonuses] = useState([]);
   const skipTimerRef = useRef(null);
 
   const diceEnabled = settings.diceRoll === true;
@@ -90,6 +115,22 @@ export function CardDraw({
     : 0;
   const redrawsLeft = Math.max(0, proficiency - redrawsUsed);
   const cardsRemaining = currentDeck ? currentDeck.length : null;
+
+  const broadcast = useCallback((eventType, data) => {
+    if (settings.visibility !== "table") return;
+    try {
+      if (eventType === "drawn") {
+        OBR.room.setMetadata({
+          [META.CURRENT_DRAW]: data,
+          [META.CURRENT_DECK]: data._remaining || null,
+        });
+      }
+      const { _remaining, ...broadcastData } = data;
+      OBR.broadcast.sendMessage(`${EXTENSION_ID}/card${eventType === "drawn" ? "Drawn" : "Resolved"}`, broadcastData);
+    } catch (e) {
+      console.warn("[DeckOfFates] Broadcast failed:", e);
+    }
+  }, [settings.visibility]);
 
   const selectPlayer = (member) => {
     setSelectedPlayer(member);
@@ -102,7 +143,8 @@ export function CardDraw({
     setD10Result(null);
     setRolling(false);
     setStatModifier(null);
-    setSkipping(false);
+    setSkipReason(null);
+    setRedrawBonuses([]);
   };
 
   const selectCheck = (check) => {
@@ -122,7 +164,7 @@ export function CardDraw({
     setPhase("rolled");
   }, []);
 
-  const doDraw = useCallback((isRedraw = false, deckOverride = null, isSkipRedraw = false) => {
+  const doDraw = useCallback((isRedraw = false, deckOverride = null, isSkipRedraw = false, accBonuses = []) => {
     let deck = deckOverride || currentDeck;
 
     if (!deck) {
@@ -135,7 +177,7 @@ export function CardDraw({
     const { drawnCard: card, remaining } = drawCard(deck);
     if (!card) return;
 
-    // Check if this class card should be auto-skipped
+    // Wrong-check skip (takes priority over redraw effect)
     if (
       selectedCheck &&
       card.type === CARD_TYPES.CLASS &&
@@ -147,16 +189,63 @@ export function CardDraw({
       setDrawnCard(card);
       setCurrentDeck(remaining);
       setPhase("drawn");
-      setSkipping(true);
+      setSkipReason("wrong-check");
       setStatModifier(null);
+      setRedrawBonuses(accBonuses);
+
+      broadcast("drawn", {
+        playerId: selectedPlayer.id,
+        playerName: selectedPlayer.name,
+        card,
+        skipReason: "wrong-check",
+        redrawBonuses: accBonuses,
+        _remaining: remaining,
+      });
+
       skipTimerRef.current = setTimeout(() => {
-        setSkipping(false);
-        doDraw(false, remaining, true);
-      }, 600);
+        setSkipReason(null);
+        doDraw(false, remaining, true, accBonuses);
+      }, SKIP_DELAY);
       return;
     }
 
-    // Compute stat modifier if Stat card + check selected
+    // Redraw effect — class card with redrawModifier triggers auto-redraw
+    if (
+      card.type === CARD_TYPES.CLASS &&
+      card.redrawModifier != null &&
+      remaining.length > 0
+    ) {
+      const newBonuses = [...accBonuses, {
+        name: card.name,
+        modifier: card.redrawModifier,
+        description: card.redrawDescription || "",
+      }];
+
+      setDrawCount((c) => c + 1);
+      setDrawnCard(card);
+      setCurrentDeck(remaining);
+      setPhase("drawn");
+      setSkipReason("redraw-effect");
+      setStatModifier(null);
+      setRedrawBonuses(newBonuses);
+
+      broadcast("drawn", {
+        playerId: selectedPlayer.id,
+        playerName: selectedPlayer.name,
+        card,
+        skipReason: "redraw-effect",
+        redrawBonuses: newBonuses,
+        _remaining: remaining,
+      });
+
+      skipTimerRef.current = setTimeout(() => {
+        setSkipReason(null);
+        doDraw(false, remaining, true, newBonuses);
+      }, SKIP_DELAY);
+      return;
+    }
+
+    // Normal draw — final card
     let computedStatMod = null;
     if (card.type === CARD_TYPES.STAT && selectedCheck) {
       const cfg = playerConfigs[selectedPlayer.id] || {};
@@ -170,31 +259,23 @@ export function CardDraw({
     setCurrentDeck(remaining);
     setPhase("drawn");
     setRedrawsUsed(finalRedrawsUsed);
-    setSkipping(false);
+    setSkipReason(null);
     setStatModifier(computedStatMod);
+    setRedrawBonuses(accBonuses);
 
-    if (settings.visibility === "table" && card) {
-      const drawData = {
-        playerId: selectedPlayer.id,
-        playerName: selectedPlayer.name,
-        card,
-        redrawsUsed: finalRedrawsUsed,
-        proficiency,
-        d10Result: diceEnabled ? d10Result : null,
-        selectedCheck,
-        statModifier: computedStatMod,
-      };
-      try {
-        OBR.room.setMetadata({
-          [META.CURRENT_DRAW]: drawData,
-          [META.CURRENT_DECK]: remaining,
-        });
-        OBR.broadcast.sendMessage(`${EXTENSION_ID}/cardDrawn`, drawData);
-      } catch (e) {
-        console.warn("[DeckOfFates] Broadcast failed:", e);
-      }
-    }
-  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency, diceEnabled, d10Result, selectedCheck]);
+    broadcast("drawn", {
+      playerId: selectedPlayer.id,
+      playerName: selectedPlayer.name,
+      card,
+      redrawsUsed: finalRedrawsUsed,
+      proficiency,
+      d10Result: diceEnabled ? d10Result : null,
+      selectedCheck,
+      statModifier: computedStatMod,
+      redrawBonuses: accBonuses,
+      _remaining: remaining,
+    });
+  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency, diceEnabled, d10Result, selectedCheck, broadcast]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -213,7 +294,8 @@ export function CardDraw({
     setD10Result(null);
     setRolling(false);
     setStatModifier(null);
-    setSkipping(false);
+    setSkipReason(null);
+    setRedrawBonuses([]);
     clearTimeout(skipTimerRef.current);
 
     if (settings.visibility === "table") {
@@ -242,7 +324,8 @@ export function CardDraw({
     setD10Result(null);
     setRolling(false);
     setStatModifier(null);
-    setSkipping(false);
+    setSkipReason(null);
+    setRedrawBonuses([]);
     clearTimeout(skipTimerRef.current);
   };
 
@@ -256,11 +339,11 @@ export function CardDraw({
     setD10Result(null);
     setRolling(false);
     setStatModifier(null);
-    setSkipping(false);
+    setSkipReason(null);
+    setRedrawBonuses([]);
     clearTimeout(skipTimerRef.current);
   };
 
-  // Listen for player-triggered redraws
   useEffect(() => {
     if (!OBR.isAvailable) return;
 
@@ -356,11 +439,9 @@ export function CardDraw({
 
   // --- Ready / Rolling / Rolled / Drawn ---
   const canGMRedraw = cardsRemaining > 0;
-  const canPlayerRedraw = redrawsLeft > 0 && cardsRemaining > 0;
 
   return (
     <div className="draw-panel">
-      {/* Player header */}
       <div className="draw-header">
         <button className="btn-ghost" onClick={backToCheck}>← Check</button>
         <div className="draw-player-name">
@@ -382,7 +463,6 @@ export function CardDraw({
         </button>
       </div>
 
-      {/* Deck info slide-out */}
       {showDeckInfo && (() => {
         const deck = fullDeck || (() => {
           const cfg = playerConfigs[selectedPlayer.id] || {};
@@ -397,7 +477,6 @@ export function CardDraw({
         );
       })()}
 
-      {/* Card area */}
       <div className="card-stage">
         {phase === "ready" && !drawnCard && !diceEnabled && (
           <div className="card-draw-prompt" onClick={() => doDraw(false)}>
@@ -426,14 +505,25 @@ export function CardDraw({
         )}
 
         {phase === "drawn" && drawnCard && (
-          <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}${skipping ? " card-skipping" : ""}`}>
+          <div className={`drawn-card-area${redrawing ? " card-redraw-out" : ""}${skipReason ? " card-skipping" : ""}`}>
             <CardFace key={drawCount} card={drawnCard} size={200} animating={true} />
-            {skipping && (
+            {skipReason === "wrong-check" && (
               <div className="skip-overlay">
                 <span className="skip-label">Wrong check — skipping</span>
               </div>
             )}
-            {statModifier != null && !skipping && (
+            {skipReason === "redraw-effect" && (
+              <div className="skip-overlay skip-overlay-effect">
+                <span className="skip-effect-name">{drawnCard.name}</span>
+                {drawnCard.redrawDescription && (
+                  <span className="skip-effect-desc">{drawnCard.redrawDescription}</span>
+                )}
+                <span className="skip-effect-mod">
+                  {drawnCard.redrawModifier >= 0 ? "+" : ""}{drawnCard.redrawModifier} bonus applied
+                </span>
+              </div>
+            )}
+            {statModifier != null && !skipReason && (
               <div className="stat-modifier-display">
                 <span className="stat-mod-label">{ABILITY_LABELS[SKILL_TO_ABILITY[selectedCheck]]}</span>
                 <span className="stat-mod-value">
@@ -445,18 +535,22 @@ export function CardDraw({
         )}
       </div>
 
-      {/* Result breakdown */}
-      {phase === "drawn" && diceEnabled && d10Result != null && drawnCard && (
+      {phase === "drawn" && !skipReason && redrawBonuses.length > 0 && (
+        <RedrawBonuses bonuses={redrawBonuses} />
+      )}
+
+      {phase === "drawn" && diceEnabled && d10Result != null && drawnCard && !skipReason && (
         <ResultBreakdown
           key={`rb-${drawCount}`}
           roll={d10Result}
           card={drawnCard}
           isRedraw={redrawsUsed > 0}
+          statModifier={statModifier}
+          redrawBonuses={redrawBonuses}
         />
       )}
 
-      {/* Actions */}
-      {phase === "drawn" && !skipping && (
+      {phase === "drawn" && !skipReason && (
         <div className="draw-actions">
           <button className="btn-redraw" onClick={doRedraw} disabled={!canGMRedraw}>
             ↻ Redraw

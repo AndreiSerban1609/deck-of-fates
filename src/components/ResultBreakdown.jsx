@@ -1,11 +1,18 @@
 import React from "react";
 import { CARD_TYPES } from "../lib/constants.js";
 
-export function ResultBreakdown({ roll, card, isRedraw }) {
+export function ResultBreakdown({ roll, card, isRedraw, statModifier, redrawBonuses }) {
   if (!card || roll == null) return null;
 
   const isCrit = card.type === CARD_TYPES.STEEL_CRITICAL || card.type === CARD_TYPES.MIGHT_CRITICAL;
   const isStat = card.type === CARD_TYPES.STAT;
+  const bonusTotal = (redrawBonuses || []).reduce((sum, b) => sum + b.modifier, 0);
+
+  const formatMod = (n) => {
+    if (n === 0) return "±0";
+    if (n > 0) return `+${n}`;
+    return `${n}`;
+  };
 
   if (isCrit) {
     return (
@@ -23,6 +30,9 @@ export function ResultBreakdown({ roll, card, isRedraw }) {
   }
 
   if (isStat) {
+    const statMod = statModifier ?? null;
+    const total = statMod != null ? roll + statMod + bonusTotal : null;
+
     return (
       <div className="result-breakdown result-slide-in">
         <span className="rb-segment">
@@ -30,22 +40,40 @@ export function ResultBreakdown({ roll, card, isRedraw }) {
           <span className="rb-value">{roll}</span>
         </span>
         <span className="rb-divider">|</span>
-        <span className="rb-segment">
-          <span className="rb-value rb-special">STAT</span>
-        </span>
+        {statMod != null ? (
+          <span className="rb-segment">
+            <span className="rb-label">Stat</span>
+            <span className="rb-value">{formatMod(statMod)}</span>
+          </span>
+        ) : (
+          <span className="rb-segment">
+            <span className="rb-value rb-special">STAT</span>
+          </span>
+        )}
+        {bonusTotal !== 0 && (
+          <>
+            <span className="rb-divider">|</span>
+            <span className="rb-segment">
+              <span className="rb-label">Bonus</span>
+              <span className="rb-value">{formatMod(bonusTotal)}</span>
+            </span>
+          </>
+        )}
+        {total != null && (
+          <>
+            <span className="rb-divider">=</span>
+            <span className="rb-segment">
+              <span className="rb-value rb-total">{total}</span>
+            </span>
+          </>
+        )}
       </div>
     );
   }
 
   const cardMod = card.modifier ?? 0;
   const redrawMod = isRedraw && card.redrawModifier != null ? card.redrawModifier : 0;
-  const total = roll + cardMod + redrawMod;
-
-  const formatMod = (n) => {
-    if (n === 0) return "±0";
-    if (n > 0) return `+${n}`;
-    return `${n}`;
-  };
+  const total = roll + cardMod + redrawMod + bonusTotal;
 
   return (
     <div className="result-breakdown result-slide-in">
@@ -64,6 +92,15 @@ export function ResultBreakdown({ roll, card, isRedraw }) {
           <span className="rb-segment">
             <span className="rb-label">Redraw</span>
             <span className="rb-value">{formatMod(redrawMod)}</span>
+          </span>
+        </>
+      )}
+      {bonusTotal !== 0 && (
+        <>
+          <span className="rb-divider">|</span>
+          <span className="rb-segment">
+            <span className="rb-label">Bonus</span>
+            <span className="rb-value">{formatMod(bonusTotal)}</span>
           </span>
         </>
       )}
