@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import OBR from "@owlbear-rodeo/sdk";
 import { EXTENSION_ID, META } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
+import { ResultBreakdown } from "./ResultBreakdown.jsx";
 
 export function PlayerView({ settings }) {
   const [lastDraw, setLastDraw] = useState(null);
@@ -111,6 +112,14 @@ export function PlayerView({ settings }) {
             <div className={redrawing ? "card-redraw-out" : ""}>
               <CardFace key={drawKey} card={lastDraw.card} size={200} animating={true} />
             </div>
+            {lastDraw.d10Result != null && (
+              <ResultBreakdown
+                key={`rb-${drawKey}`}
+                roll={lastDraw.d10Result}
+                card={lastDraw.card}
+                isRedraw={redrawsUsed > 0}
+              />
+            )}
             {proficiency > 0 && (
               <div className="draw-actions" style={{ marginTop: 12 }}>
                 <button

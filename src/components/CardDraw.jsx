@@ -3,6 +3,8 @@ import OBR from "@owlbear-rodeo/sdk";
 import { buildDeck, shuffle, drawCard, getEffectiveDeckSize } from "../lib/deck.js";
 import { EXTENSION_ID, META, CARD_TYPES } from "../lib/constants.js";
 import { CardFace, CardBack } from "./CardArt.jsx";
+import { DiceRoll } from "./DiceRoll.jsx";
+import { ResultBreakdown } from "./ResultBreakdown.jsx";
 
 const TYPE_LABELS = {
   [CARD_TYPES.STEEL_CRITICAL]: "Crit",
@@ -69,11 +71,15 @@ export function CardDraw({
   const [currentDeck, setCurrentDeck] = useState(null);
   const [fullDeck, setFullDeck] = useState(null);
   const [drawnCard, setDrawnCard] = useState(null);
-  const [phase, setPhase] = useState("select"); // "select" | "ready" | "drawn"
+  const [phase, setPhase] = useState("select"); // "select" | "ready" | "rolling" | "rolled" | "drawn"
   const [redrawing, setRedrawing] = useState(false);
   const [drawCount, setDrawCount] = useState(0);
   const [redrawsUsed, setRedrawsUsed] = useState(0);
   const [showDeckInfo, setShowDeckInfo] = useState(false);
+  const [d10Result, setD10Result] = useState(null);
+  const [rolling, setRolling] = useState(false);
+
+  const diceEnabled = settings.diceRoll === true;
 
   const proficiency = selectedPlayer
     ? (playerConfigs[selectedPlayer.id]?.proficiency || 0)
@@ -88,7 +94,21 @@ export function CardDraw({
     setCurrentDeck(null);
     setFullDeck(null);
     setRedrawsUsed(0);
+    setD10Result(null);
+    setRolling(false);
   };
+
+  const startRoll = () => {
+    const result = Math.floor(Math.random() * 10) + 1;
+    setD10Result(result);
+    setRolling(true);
+    setPhase("rolling");
+  };
+
+  const onRollComplete = useCallback(() => {
+    setRolling(false);
+    setPhase("rolled");
+  }, []);
 
   const doDraw = useCallback((isRedraw = false) => {
     let deck = currentDeck;
@@ -117,6 +137,7 @@ export function CardDraw({
         card,
         redrawsUsed: newRedrawsUsed,
         proficiency,
+        d10Result: diceEnabled ? d10Result : null,
       };
       try {
         OBR.room.setMetadata({
@@ -128,7 +149,7 @@ export function CardDraw({
         console.warn("[DeckOfFates] Broadcast failed:", e);
       }
     }
-  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency]);
+  }, [currentDeck, selectedPlayer, deckTemplate, playerConfigs, settings, redrawsUsed, proficiency, diceEnabled, d10Result]);
 
   const doRedraw = useCallback(() => {
     setRedrawing(true);
@@ -144,6 +165,8 @@ export function CardDraw({
     setFullDeck(null);
     setPhase("ready");
     setRedrawsUsed(0);
+    setD10Result(null);
+    setRolling(false);
 
     if (settings.visibility === "table") {
       try {
@@ -167,6 +190,8 @@ export function CardDraw({
     setFullDeck(null);
     setPhase("select");
     setRedrawsUsed(0);
+    setD10Result(null);
+    setRolling(false);
   };
 
   // Listen for player-triggered redraws
@@ -252,10 +277,29 @@ export function CardDraw({
 
       {/* Card area */}
       <div className="card-stage">
-        {phase === "ready" && !drawnCard && (
+        {phase === "ready" && !drawnCard && !diceEnabled && (
           <div className="card-draw-prompt" onClick={() => doDraw(false)}>
             <CardBack size={180} />
             <div className="draw-hint">Tap to draw</div>
+          </div>
+        )}
+
+        {phase === "ready" && diceEnabled && (
+          <div className="card-draw-prompt" onClick={startRoll}>
+            <DiceRoll result={null} rolling={false} size={120} />
+            <div className="draw-hint">Tap to roll</div>
+          </div>
+        )}
+
+        {(phase === "rolling" || phase === "rolled") && diceEnabled && (
+          <div className="dice-and-card-area">
+            <DiceRoll result={d10Result} rolling={rolling} size={120} onRollComplete={onRollComplete} />
+            {phase === "rolled" && (
+              <div className="card-draw-prompt" onClick={() => doDraw(false)} style={{ marginTop: 12 }}>
+                <CardBack size={140} />
+                <div className="draw-hint">Tap to draw</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -265,6 +309,16 @@ export function CardDraw({
           </div>
         )}
       </div>
+
+      {/* Result breakdown */}
+      {phase === "drawn" && diceEnabled && d10Result != null && drawnCard && (
+        <ResultBreakdown
+          key={`rb-${drawCount}`}
+          roll={d10Result}
+          card={drawnCard}
+          isRedraw={redrawsUsed > 0}
+        />
+      )}
 
       {/* Actions */}
       {phase === "drawn" && (

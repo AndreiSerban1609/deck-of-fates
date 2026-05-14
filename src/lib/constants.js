@@ -55,4 +55,5 @@ export const SKILL_CHECKS = [
 
 export const DEFAULT_SETTINGS = {
   visibility: "dm-only", // "dm-only" | "table"
+  diceRoll: false,
 };

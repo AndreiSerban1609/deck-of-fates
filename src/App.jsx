@@ -5,6 +5,7 @@ import { DeckEditor } from "./components/DeckEditor.jsx";
 import { PlayerView } from "./components/PlayerView.jsx";
 import { PlayerDeckEditor } from "./components/PlayerDeckEditor.jsx";
 import { CardPreview } from "./components/CardPreview.jsx";
+import { MockDrawFlow } from "./components/MockDrawFlow.jsx";
 
 export default function App() {
   const { ready, isGM, playerId, playerName, partyMembers, theme } = useOBR();
@@ -40,7 +41,7 @@ export default function App() {
 
   // Standalone preview mode (no OBR)
   if (!ready && showPreview) {
-    return <CardPreview />;
+    return <StandaloneMode />;
   }
 
   // Player view
@@ -101,6 +102,18 @@ export default function App() {
               >
                 {settings.visibility === "table" ? "👁" : "🙈"}
               </button>
+              <button
+                className={`btn-icon ${settings.diceRoll ? "active" : ""}`}
+                onClick={() =>
+                  saveSettings({
+                    ...settings,
+                    diceRoll: !settings.diceRoll,
+                  })
+                }
+                title={settings.diceRoll ? "D10 roll enabled" : "D10 roll disabled"}
+              >
+                🎲
+              </button>
             </>
           )}
         </div>
@@ -134,6 +147,38 @@ export default function App() {
           onBack={() => setView("draw")}
         />
       )}
+    </div>
+  );
+}
+
+function StandaloneMode() {
+  const [mode, setMode] = useState("draw");
+  return (
+    <div className="app" data-theme="DARK">
+      <div className="app-header">
+        <h1 className="app-title">Deck of Fates</h1>
+        <div className="header-actions">
+          <button
+            className={`btn-icon ${mode === "draw" ? "active" : ""}`}
+            onClick={() => setMode("draw")}
+            title="Mock Draw"
+          >
+            🎲
+          </button>
+          <button
+            className={`btn-icon ${mode === "preview" ? "active" : ""}`}
+            onClick={() => setMode("preview")}
+            title="Card Preview"
+          >
+            🃏
+          </button>
+        </div>
+      </div>
+      <div className="visibility-bar dm-only">
+        Standalone mode · Not connected to Owlbear Rodeo
+      </div>
+      {mode === "draw" && <MockDrawFlow />}
+      {mode === "preview" && <CardPreview />}
     </div>
   );
 }
