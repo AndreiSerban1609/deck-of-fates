@@ -102,7 +102,7 @@ export function CardDraw({
     setPhase("ready");
   };
 
-  const doDraw = useCallback((isRedraw = false, deckOverride = null) => {
+  const doDraw = useCallback((isRedraw = false, deckOverride = null, isSkipRedraw = false) => {
     let deck = deckOverride || currentDeck;
 
     if (!deck) {
@@ -133,7 +133,7 @@ export function CardDraw({
       setStatModifier(null);
       skipTimerRef.current = setTimeout(() => {
         setSkipping(false);
-        doDraw(false, remaining);
+        doDraw(false, remaining, true);
       }, 600);
       return;
     }
@@ -145,11 +145,13 @@ export function CardDraw({
       computedStatMod = getStatModifierForCheck(selectedCheck, cfg.stats);
     }
 
+    const finalRedrawsUsed = isRedraw ? redrawsUsed + 1 : isSkipRedraw ? redrawsUsed : 0;
+
     setDrawCount((c) => c + 1);
     setDrawnCard(card);
     setCurrentDeck(remaining);
     setPhase("drawn");
-    setRedrawsUsed(isRedraw ? redrawsUsed + 1 : 0);
+    setRedrawsUsed(finalRedrawsUsed);
     setSkipping(false);
     setStatModifier(computedStatMod);
 
@@ -158,7 +160,7 @@ export function CardDraw({
         playerId: selectedPlayer.id,
         playerName: selectedPlayer.name,
         card,
-        redrawsUsed: isRedraw ? redrawsUsed + 1 : 0,
+        redrawsUsed: finalRedrawsUsed,
         proficiency,
         selectedCheck,
         statModifier: computedStatMod,
