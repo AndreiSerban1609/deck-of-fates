@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { CLASS_LIST } from "../lib/classThemes.js";
-import { SKILL_CHECKS } from "../lib/constants.js";
+import { SKILL_CHECKS, ABILITY_SCORES, ABILITY_LABELS } from "../lib/constants.js";
+import { getAbilityModifier } from "../lib/deck.js";
 
 export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerConfig, onSave, onBack }) {
   const [config, setConfig] = useState({
@@ -50,6 +51,12 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
 
   function updateProficiency(value) {
     save({ ...config, proficiency: Math.max(0, value) });
+  }
+
+  function updateStat(stat, value) {
+    const stats = { ...(config.stats || {}) };
+    stats[stat] = Math.max(1, Math.min(30, value));
+    save({ ...config, stats });
   }
 
   function addClassCard() {
@@ -147,6 +154,27 @@ export function PlayerDeckEditor({ playerId, playerName, deckTemplate, playerCon
           <span>{config.proficiency || 0}</span>
           <button onClick={function() { updateProficiency((config.proficiency || 0) + 1); }}>+</button>
         </div>
+      </div>
+
+      <div className="subsection-header">
+        <span>Ability Scores</span>
+      </div>
+      <div className="editor-section" style={{ paddingTop: 8, paddingBottom: 8 }}>
+        {ABILITY_SCORES.map(function(stat) {
+          var score = config.stats && config.stats[stat] || 10;
+          var mod = getAbilityModifier(score);
+          var modStr = mod >= 0 ? "+" + mod : "" + mod;
+          return (
+            <div key={stat} className="field-row" style={{ marginBottom: 2 }}>
+              <label style={{ fontSize: 11 }}>{ABILITY_LABELS[stat]}</label>
+              <div className="stepper">
+                <button onClick={function() { updateStat(stat, score - 1); }}>−</button>
+                <span style={{ fontSize: 11 }}>{score} <span style={{ color: "#9a9688", fontSize: 10 }}>({modStr})</span></span>
+                <button onClick={function() { updateStat(stat, score + 1); }}>+</button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="subsection-header">

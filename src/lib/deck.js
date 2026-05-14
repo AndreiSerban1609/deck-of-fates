@@ -1,4 +1,17 @@
-import { CARD_TYPES } from "./constants.js";
+import { CARD_TYPES, SKILL_TO_ABILITY } from "./constants.js";
+
+export function getAbilityModifier(score) {
+  return Math.floor((score - 10) / 2);
+}
+
+export function getStatModifierForCheck(checkName, playerStats) {
+  if (!checkName || !playerStats) return null;
+  const ability = SKILL_TO_ABILITY[checkName];
+  if (!ability) return null;
+  const score = playerStats[ability];
+  if (score == null) return null;
+  return getAbilityModifier(score);
+}
 
 let cardIdCounter = 0;
 
