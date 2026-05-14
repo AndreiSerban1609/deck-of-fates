@@ -35,35 +35,73 @@ export function PlayerView({ settings, playerId }) {
   const [diceResult, setDiceResult] = useState(null);
   const [dicePlayerName, setDicePlayerName] = useState(null);
   const redrawTimer = useRef(null);
+  const pendingDrawRef = useRef(null);
+  const dicePhaseRef = useRef(null);
 
   const applyDraw = useCallback((data) => {
     setRedrawing(false);
     clearTimeout(redrawTimer.current);
+
+    const isRedraw = (data.redrawsUsed || 0) > 0 || data.skipReason;
+
+    if (!isRedraw && dicePhaseRef.current === "rolling") {
+      pendingDrawRef.current = data;
+      return;
+    }
+
     setDrawKey((k) => k + 1);
     setLastDraw(data);
     if (data.d10Result != null) {
       setDicePhase("done");
+      dicePhaseRef.current = "done";
       setDiceResult(data.d10Result);
     }
   }, []);
+
+  const rollSafetyRef = useRef(null);
 
   const startDiceRoll = useCallback((data) => {
     setDiceResult(data.d10Result);
     setDicePlayerName(data.playerName);
     setDicePhase("rolling");
+    dicePhaseRef.current = "rolling";
+    setLastDraw(null);
+    pendingDrawRef.current = null;
+
+    clearTimeout(rollSafetyRef.current);
+    rollSafetyRef.current = setTimeout(() => {
+      if (dicePhaseRef.current === "rolling") {
+        dicePhaseRef.current = "done";
+        setDicePhase("done");
+        if (pendingDrawRef.current) {
+          setDrawKey((k) => k + 1);
+          setLastDraw(pendingDrawRef.current);
+          pendingDrawRef.current = null;
+        }
+      }
+    }, 2000);
   }, []);
 
   const onPlayerRollComplete = useCallback(() => {
     setDicePhase("done");
+    dicePhaseRef.current = "done";
+    if (pendingDrawRef.current) {
+      setDrawKey((k) => k + 1);
+      setLastDraw(pendingDrawRef.current);
+      pendingDrawRef.current = null;
+    }
   }, []);
 
   const clearDraw = useCallback(() => {
     setRedrawing(false);
     clearTimeout(redrawTimer.current);
+    clearTimeout(rollSafetyRef.current);
     setLastDraw(null);
     setDicePhase(null);
+    dicePhaseRef.current = null;
     setDiceResult(null);
     setDicePlayerName(null);
+    pendingDrawRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -157,7 +195,7 @@ export function PlayerView({ settings, playerId }) {
           </>
         )}
 
-        {dicePhase === "rolling" && diceResult != null && !lastDraw && (
+        {(dicePhase === "rolling" || dicePhase === "done") && diceResult != null && !lastDraw && (
           <>
             <div className="player-draw-label">
               {dicePlayerName}'s roll:
@@ -166,10 +204,13 @@ export function PlayerView({ settings, playerId }) {
               <DiceRoll
                 key={drawKey}
                 result={diceResult}
-                rolling={true}
+                rolling={dicePhase === "rolling"}
                 size={120}
                 onRollComplete={onPlayerRollComplete}
               />
+              {dicePhase === "done" && (
+                <p className="player-waiting-text" style={{ marginTop: 8 }}>Awaiting the draw...</p>
+              )}
             </div>
           </>
         )}
