@@ -1069,6 +1069,10 @@ body {
   border-radius: var(--radius-sm);
   padding: 6px 14px;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .skip-label {
@@ -1078,6 +1082,13 @@ body {
   letter-spacing: 1px;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.skip-hint {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: rgba(224, 160, 64, 0.6);
+  letter-spacing: 0.5px;
 }
 
 /* ---- Stat Modifier Display ---- */

@@ -208,7 +208,6 @@ function StandaloneMode() {
             <MockPlayerView
               broadcast={lastBroadcast}
               onRequestRedraw={handlePlayerRedraw}
-              mockPlayerId="p1"
             />
           </div>
         </div>

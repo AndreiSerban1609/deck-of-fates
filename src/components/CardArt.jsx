@@ -21,8 +21,8 @@ export function SkillIcon({ skill, color, size = 14 }) {
     Stealth: <g><path d="M1 7 Q4 2.5 7 2.5 Q10 2.5 13 7 Q10 11.5 7 11.5 Q4 11.5 1 7 Z" {...s} strokeWidth="1.3"/><circle cx="7" cy="7" r="2.2" {...p}/><line x1="2" y1="12" x2="12" y2="2" stroke={color} strokeWidth="1.6" strokeLinecap="round"/></g>,
     // Open book
     Knowledge: <g><path d="M7 3 L7 12" {...s} strokeWidth="1"/><path d="M7 3 Q4 2 1.5 3 L1.5 12 Q4 11 7 12" {...s} strokeWidth="1.3"/><path d="M7 3 Q10 2 12.5 3 L12.5 12 Q10 11 7 12" {...s} strokeWidth="1.3"/></g>,
-    // Five-pointed star
-    Arcana: <g><path d="M7 0.5 L8.5 5 L13 5 L9.5 8 L10.8 13 L7 10 L3.2 13 L4.5 8 L1 5 L5.5 5 Z" {...p}/></g>,
+    // Arcane rune circle
+    Arcana: <g><circle cx="7" cy="7" r="5.5" {...s} strokeWidth="1.3"/><circle cx="7" cy="7" r="2.5" {...s} strokeWidth="1.1"/><line x1="7" y1="1.5" x2="7" y2="4.5" {...s} strokeWidth="1.1"/><line x1="7" y1="9.5" x2="7" y2="12.5" {...s} strokeWidth="1.1"/><line x1="1.5" y1="7" x2="4.5" y2="7" {...s} strokeWidth="1.1"/><line x1="9.5" y1="7" x2="12.5" y2="7" {...s} strokeWidth="1.1"/></g>,
     // Magnifying glass
     Investigation: <g><circle cx="6" cy="6" r="4" {...s} strokeWidth="1.6"/><line x1="9" y1="9.5" x2="13" y2="13" {...s} strokeWidth="2.2"/></g>,
     // Medical cross
